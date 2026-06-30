@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  color-scheme: light;
+  --bg: #f5f8fb;
+  --surface: #ffffff;
+  --surface-2: #eef4fa;
+  --text: #102033;
+  --muted: #54657a;
+  --border: #d9e4ef;
+  --primary: #2563eb;
+  --primary-2: #1d4ed8;
+  --success: #157347;
+  --shadow: 0 10px 30px rgba(16, 32, 51, 0.08);
+  --radius: 24px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.55;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  width: 100%;
+  /* `clip` prevents horizontal overflow WITHOUT creating a scroll container,
+     so `position: sticky` on the top nav keeps working (overflow-x: hidden
+     would break it). */
+  overflow-x: clip;
+  background: radial-gradient(circle at top, #ffffff 0%, var(--bg) 45%, #edf4fb 100%);
+  /* 1rem (not 16px) so the accessibility font-size control, which scales the
+     html root, also scales body text. */
+  font-size: 1rem;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button,
+input,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input {
+  width: 100%;
+  margin-top: 0.4rem;
+  margin-bottom: 1rem;
+  padding: 0.95rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  background: white;
+  color: var(--text);
+}
+
+input:focus {
+  outline: 3px solid rgba(37, 99, 235, 0.25);
+  border-color: var(--primary);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 1.25rem;
+}

@@ -1,0 +1,15 @@
+.auth-shell {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - 110px);
+  padding: 1rem;
+}
+
+.auth-card {
+  width: min(100%, 560px);
+}
+
+.helper-text {
+  color: var(--muted);
+  font-size: 0.95rem;
+}

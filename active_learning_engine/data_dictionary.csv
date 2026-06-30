@@ -1,0 +1,34 @@
+File,Variable Name,Label,Data Type,Possible Values / Range,Unit,Required,Description
+File Naming Convention,{study_id}_{session_id}_{YYYYMMDD_HHMMSS}.json,Session Summary Filename,—,P001_a1b2c3d4_20260325_143000.json,—,—,"Format: {participant ID}_{session UUID}_{export date/time in UTC}. Each session produces 4 files with this base name plus suffixes: .json (summary), _falls.csv, _feedback.csv, _notes.json"
+File Naming Convention,{study_id}_{session_id}_{YYYYMMDD_HHMMSS}_falls.csv,Falls Export Filename,—,P001_a1b2c3d4_20260325_143000_falls.csv,—,—,One row per detected fall event during the session
+File Naming Convention,{study_id}_{session_id}_{YYYYMMDD_HHMMSS}_feedback.csv,Feedback Export Filename,—,P001_a1b2c3d4_20260325_143000_feedback.csv,—,—,One row per coaching feedback message generated during the session
+File Naming Convention,{study_id}_{session_id}_{YYYYMMDD_HHMMSS}_notes.json,Researcher Notes Filename,—,P001_a1b2c3d4_20260325_143000_notes.json,—,—,Array of timestamped researcher observations entered during the session
+File Naming Convention,{study_id}_{session_id}_autosave.json,Crash Recovery File,—,P001_a1b2c3d4_autosave.json,—,—,"Auto-written every 60s during active sessions. Deleted after successful export or discard. If present, indicates a session that was not properly closed"
+Session Summary JSON,study_id,Participant Study ID,String,Researcher-assigned code (e.g. P001),—,Yes,De-identified participant code assigned by researcher before session
+Session Summary JSON,session_id,Session Identifier,String,Auto-generated UUID fragment,—,Yes,Unique identifier for this practice session
+Session Summary JSON,start_time_iso,Session Start Time,String (ISO 8601),ISO datetime,—,Yes,Wall-clock timestamp of session start (file metadata only)
+Session Summary JSON,duration_seconds,Active Session Duration,Integer,0–7200,seconds,Yes,Total active practice time excluding paused intervals
+Session Summary JSON,total_falls,Total Falls Detected,Integer,0–999,count,Yes,Number of falls detected and recorded by the SiA model during the session
+Session Summary JSON,average_technique_score,Average Technique Score,Float,0.0–100.0,score,Yes,Mean technique score across all recorded falls
+Session Summary JSON,best_technique_score,Best Technique Score,Integer,0–100,score,Yes,Highest single-fall technique score achieved during session
+Session Summary JSON,total_feedback_count,Total Feedback Count,Integer,0–999,count,Yes,Total coaching feedback messages generated (rule-based + AI)
+Session Summary JSON,component_health,System Component Status,Object,See Component Health table,—,Yes,Status of each ML component at time of export for data quality assessment
+Falls CSV,study_id,Participant Study ID,String,Same as session summary,—,Yes,De-identified participant code
+Falls CSV,session_id,Session Identifier,String,Same as session summary,—,Yes,Unique session identifier
+Falls CSV,relative_timestamp,Fall Detection Time,Float,0.0–7200.0,seconds,Yes,Time of fall detection relative to session start
+Falls CSV,technique_score,Technique Score,Integer,0–100,score,Yes,"AI-assessed quality score for fall technique (0–49: needs practice, 50–69: fair, 70–89: good, 90–100: excellent)"
+Falls CSV,feedback,Coaching Feedback,String,Free text,—,Yes,AI-generated coaching feedback about the fall technique
+Falls CSV,pose_angles,Body Joint Angles,JSON String,Object with joint names as keys and degree values,"degrees (°)",No,"Body joint angles at time of fall detection (e.g. knee_l, hip_l, elbow_r)"
+Feedback CSV,study_id,Participant Study ID,String,Same as session summary,—,Yes,De-identified participant code
+Feedback CSV,session_id,Session Identifier,String,Same as session summary,—,Yes,Unique session identifier
+Feedback CSV,relative_timestamp,Feedback Time,Float,0.0–7200.0,seconds,Yes,Time of feedback event relative to session start
+Feedback CSV,message,Feedback Message,String,Free text,—,Yes,Coaching feedback text shown to participant
+Feedback CSV,severity,Feedback Severity,String,"neutral, info, warn, error, fall",—,Yes,"Severity level: neutral=informational, info=positive reinforcement, warn=correction needed, error=fall analysis in progress, fall=fall analysis complete"
+Feedback CSV,pose_score,Pose Quality Score,Integer,0–100,score,Yes,Pose quality score at time of feedback generation
+Researcher Notes JSON,relative_timestamp,Note Time,Float,0.0–7200.0,seconds,Yes,Time the note was created relative to session start
+Researcher Notes JSON,text,Researcher Observation,String,Free text,—,Yes,Free-text researcher observation (not shown to participant)
+Component Health,pose_estimator,Pose Estimator Status,String,"ready, placeholder, error: <msg>, not_initialized",—,Yes,RTMLib pose estimation model status
+Component Health,fall_detector,Fall Detector Status,String,"ready, placeholder, error: <msg>, not_initialized",—,Yes,SiA fall detection model status
+Component Health,feedback_generator,Feedback Generator Status,String,"ready, error, not_initialized",—,Yes,LLM feedback system status (Ovis2.5-2B or Gemini)
+Component Health,websocket,WebSocket Server Status,String,"ready, error, not_initialized",—,Yes,Mobile companion app WebSocket server status
+Component Health,camera,Camera Status,String,"ready, idle, disconnected",—,Yes,USB camera capture status

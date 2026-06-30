@@ -1,0 +1,29 @@
+# PyTorch with CUDA 12.1 support (compatible with all target machines)
+# Driver compat: cu121 works on CUDA 12.1+ drivers (workstation 12.8, personal 13.1, ARCC 12.1)
+# IMPORTANT: Use --index-url (not --extra-index-url) to prevent pip from grabbing
+# a newer CUDA variant (e.g. cu130) from the default PyPI index.
+#--find-links https://download.pytorch.org/whl/cu121
+#torch==2.5.1+cu121
+#torchvision==0.20.1+cu121
+
+# FastAPI server (Flutter desktop app backend)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0
+qrcode[pil]>=7.4
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
+# RTMLib for pose estimation
+rtmlib
+# SiA model dependencies
+ftfy>=6.1.0
+einops>=0.6.0
+timm>=0.9.0
+scipy>=1.10.0
+regex>=2023.0.0
+# Ovis2.5-2B (local multimodal LLM)
+# PINNED: Ovis2.5-2B remote code is incompatible with transformers 5.x
+transformers==4.51.3
+# HuggingFace model loading optimization
+accelerate>=1.0.0

@@ -1,0 +1,19 @@
+.high-contrast {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f2f2f2;
+  --text: #000000;
+  --muted: #1f2937;
+  --border: #111827;
+  --primary: #0f3fb4;
+  --primary-2: #0b2f8c;
+  /* Paint a solid background over the body's gradient so the high-contrast
+     theme isn't diluted. min-height keeps it covering the full page. */
+  background: #ffffff;
+  min-height: 100vh;
+}
+
+.high-contrast .card,
+.high-contrast .top-nav {
+  border: 1px solid var(--border);
+}

@@ -1,0 +1,66 @@
+.hero {
+  display: grid;
+  gap: 1.25rem;
+  width: 100%;
+  grid-template-columns: 1fr;
+  padding: clamp(1.1rem, 2.5vw, 1.8rem);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+}
+
+.hero-copy,
+.hero-panel {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.hero-copy {
+  max-width: 46rem;
+}
+
+.hero-panel {
+  min-width: 0;
+  align-self: stretch;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f7fbff, #eef5ff);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+.mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.1rem 0;
+}
+
+.grid-2 {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-2 > .card {
+  height: 100%;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+@media (min-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+    align-items: center;
+  }
+}
+
+@media (max-width: 800px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

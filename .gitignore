@@ -1,0 +1,102 @@
+# ─────────────────────────────────────────────────────────────
+# SafeFall Coach — root .gitignore
+# Subfolders (safe-fall-coach-Web, safefall_coach_mobile, etc.) keep
+# their own .gitignore; this covers the shared/Python/ML junk.
+# ─────────────────────────────────────────────────────────────
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+*.egg
+*.egg-info/
+safefall.egg-info/
+.installed.cfg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Stray files created by a botched `pip install ... >=x.y` (the shell
+# redirects `>` into a file literally named "=x.y.z").
+=*
+
+# ── Virtual environments ──
+.venv/
+venv/
+env/
+ENV/
+**/.venv/
+**/venv/
+
+# ── Test / type / lint caches ──
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# ── Node / web (root-level safety; web folder has its own too) ──
+node_modules/
+.npm/
+*.tsbuildinfo
+
+# ── Environment & secrets ──
+.env
+.env.*
+!.env.example
+*.local
+
+# ── ML model weights & caches ──
+# NOTE: if any weights are intentionally tracked via git-lfs, remove the
+# matching line below so LFS keeps managing them.
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.ckpt
+*.bin
+rtmlib/
+.cache/
+**/checkpoints/
+*.zip
+
+# ── Session data / research exports (regenerated at runtime) ──
+session_data/
+**/session_data/
+*_notes.json
+
+# ── Logs ──
+logs/
+*.log
+
+# ── OS / editor ──
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+*.swo
+*~
+
+# Keep VS Code shared settings but ignore the noisy per-user bits.
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+.claude/
+pyproject.toml
+passive_learning_worker.py
+launch_safefall.bat
+safefall_desktop_linux_bin/
+# Model weights
+*.pt
+sia_model/weights/

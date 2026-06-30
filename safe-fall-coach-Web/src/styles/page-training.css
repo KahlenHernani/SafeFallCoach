@@ -1,0 +1,53 @@
+.video-grid {
+  display: grid;
+  gap: 1.1rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  width: 100%;
+}
+
+.video-card {
+  display: grid;
+  gap: 0.95rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+.video-card h2,
+.video-card p {
+  margin: 0;
+}
+
+.video-card p {
+  color: var(--muted);
+}
+
+.video-preview,
+.camera-frame {
+  min-height: 200px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #eaf1ff, #f5f8fb);
+  border: 2px dashed #bfd1ee;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  padding: 1rem;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.tag {
+  background: #edf4ff;
+  color: #2952aa;
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
