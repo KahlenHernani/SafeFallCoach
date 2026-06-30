@@ -11,6 +11,7 @@ Used by both server.py (FastAPI) and app_gradio.py (legacy Gradio UI).
 import re
 import time
 import threading
+import os
 from concurrent.futures import ThreadPoolExecutor, Future
 from typing import Optional, List, Dict
 import numpy as np
@@ -100,10 +101,17 @@ class ActiveLearningWizard:
         self._pending_llm_future: Optional[Future] = None
         self._llm_pending_fall_data: Optional[dict] = None
         self._llm_submit_time: float = 0  # When the LLM future was submitted
-        self._llm_timeout_seconds: float = 90.0  # Max time to wait for LLM
+        self._llm_timeout_seconds: float = float(
+            os.getenv("SAFEFALL_LLM_TIMEOUT_SECONDS", "240")
+        )  # Max time to wait for Ovis before rule-based fallback
 
         # Shared state for UI updates
         self._latest_pose_info: str = ""
+        self._latest_body_landmarks: dict = {
+            "frame_width": 0,
+            "frame_height": 0,
+            "people": [],
+        }
         self._latest_feedback: str = ""
         self._latest_feedback_time: float = 0
         self._latest_severity: str = "neutral"
@@ -397,6 +405,9 @@ class ActiveLearningWizard:
         # empty frame would cause the desktop app to miss most messages)
         with self._frame_lock:
             self._latest_pose_info = pose_info
+            self._latest_body_landmarks = self._serialize_body_landmarks(
+                pose_result, frame
+            )
             if feedback_text:
                 self._latest_feedback = feedback_text
                 self._latest_feedback_time = time.time()
@@ -405,6 +416,32 @@ class ActiveLearningWizard:
         # Convert BGR → RGB for display
         annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
         return annotated_rgb, pose_info, feedback_text
+
+    def _serialize_body_landmarks(self, pose_result, frame: np.ndarray) -> dict:
+        """Return lightweight body landmark data for the web overlay."""
+        frame_height, frame_width = frame.shape[:2]
+        payload = {
+            "frame_width": int(frame_width),
+            "frame_height": int(frame_height),
+            "people": [],
+        }
+        if pose_result is None or pose_result.num_people == 0:
+            return payload
+
+        for person in pose_result.keypoints:
+            landmarks = []
+            for index, point in enumerate(person):
+                if len(point) < 3:
+                    continue
+                x, y, score = point[:3]
+                landmarks.append({
+                    "index": int(index),
+                    "x": float(x),
+                    "y": float(y),
+                    "score": float(score),
+                })
+            payload["people"].append({"landmarks": landmarks})
+        return payload
 
     # ── Feedback / LLM pipeline (private) ───────────────────────
 
@@ -489,6 +526,12 @@ class ActiveLearningWizard:
                     # Submit to thread pool — non-blocking
                     self._llm_pending_fall_data = data
                     self._llm_submit_time = time.time()
+                    print(
+                        f"[Wizard] Submitting fall analysis to Ovis "
+                        f"(timeout={self._llm_timeout_seconds:.0f}s, "
+                        f"frames={len(all_frames)})",
+                        flush=True,
+                    )
                     self._pending_llm_future = self._llm_executor.submit(
                         self.feedback_generator.generate_fall_feedback,
                         technique_score=data['technique_score'],

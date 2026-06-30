@@ -221,8 +221,15 @@ class FeedbackGenerator:
         current_time = time.time()
         technique_score = technique_score or 0
 
+        can_call_llm = self._can_call_llm()
+
         # Try LLM first if enabled (fall events always eligible)
-        if self.use_llm and self._can_call_llm():
+        if self.use_llm and can_call_llm:
+            print(
+                f"[Feedback] Requesting detailed fall feedback from {self._llm_provider.name} "
+                f"(frames={len(frames) if frames else 0}, action={fall_action})",
+                flush=True,
+            )
             llm_result = self._try_llm_with_backoff(
                 pose_angles = pose_angles,
                 technique_score = technique_score,
@@ -246,6 +253,13 @@ class FeedbackGenerator:
                     suggestion = self._get_fall_suggestion(score, pose_angles),
                     timestamp = current_time,
                 )
+            print(
+                "[Feedback] LLM returned no result; using detailed rule-based fallback.",
+                flush=True,
+            )
+        else:
+            reason = "LLM disabled during initialization" if not self.use_llm else "LLM call blocked by rate/backoff"
+            print(f"[Feedback] {reason}; using detailed rule-based fallback.", flush=True)
 
         # Fallback to rule-based analysis
         positives = []
@@ -258,7 +272,10 @@ class FeedbackGenerator:
         if left_elbow < 150 and right_elbow < 150:
             positives.append("arms bent correctly")
         elif left_elbow > 160 or right_elbow > 160:
-            improvements.append("try to keep arms bent")
+            improvements.append(
+                "Keep both arms bent instead of reaching out with straight hands. "
+                "Straight arms can put a lot of force through the wrists, elbows, and shoulders during impact."
+            )
 
         # Check knee angles (knees should be bent)
         left_knee = pose_angles.get('left_knee', 180)
@@ -267,31 +284,68 @@ class FeedbackGenerator:
         if left_knee < 160 and right_knee < 160:
             positives.append("good knee bend")
         else:
-            improvements.append("bend knees more")
+            improvements.append(
+                "Bend your knees more before and during the descent. "
+                "More knee bend lowers your center of gravity and gives you more control before contact with the mat."
+            )
 
         # Check torso tilt
         torso_tilt = pose_angles.get('torso_tilt', 0)
         if torso_tilt < 15:
             positives.append("good body alignment")
         else:
-            improvements.append("control your center of gravity")
+            improvements.append(
+                "Control your center of gravity by keeping your torso organized and moving as one unit. "
+                "This helps avoid twisting or landing flat on one hard point."
+            )
 
-        # Build message
+        # Build supportive user-facing fallback message. Keep Ovis diagnostics in logs only.
         score = technique_score or 0
         if score >= 80:
-            prefix = "Excellent fall technique!"
+            prefix = "Excellent effort - that was a strong practice fall."
         elif score >= 60:
-            prefix = "Good attempt!"
+            prefix = "Good attempt - you are building the right habits."
         else:
-            prefix = "Keep practicing!"
+            prefix = "Keep practicing - this is exactly the kind of rep that helps you improve."
 
-        parts = [prefix]
+        action_text = f" Detected action: {fall_action}." if fall_action else ""
+        likely_causes = []
+        if left_elbow > 160 or right_elbow > 160:
+            likely_causes.append(
+                "reaching with straighter arms may have pulled your weight forward and made the landing harder to control"
+            )
+        if left_knee >= 160 or right_knee >= 160:
+            likely_causes.append(
+                "not bending the knees enough likely kept your center of gravity higher than ideal"
+            )
+        if torso_tilt >= 15:
+            likely_causes.append(
+                "torso tilt may have shifted your center of gravity away from a smooth, controlled descent"
+            )
+        cause_text = (
+            "What might have caused the fall: " + "; ".join(likely_causes) + "."
+            if likely_causes
+            else "What might have caused the fall: The movement looked mostly controlled, so the main focus is repeating the same pattern slowly and consistently."
+        )
+
+        parts = [f"Summary: {prefix}{action_text}", cause_text]
 
         if positives:
-            parts.append(f"You did well: {', '.join(positives)}.")
+            parts.append(
+                "What you did well: " +
+                " ".join(f"{item.capitalize()}." for item in positives)
+            )
+        else:
+            parts.append(
+                "What you did well: You completed a practice fall and stayed in the camera view long enough for the coach to evaluate the movement."
+            )
 
         if improvements:
-            parts.append(f"Try to: {', '.join(improvements)}.")
+            parts.append("What to improve: " + " ".join(improvements))
+        else:
+            parts.append(
+                "What to improve: Keep repeating the same controlled movement slowly, with attention to chin tuck, bent arms, bent knees, and a soft landing path."
+            )
 
         message = " ".join(parts)
 

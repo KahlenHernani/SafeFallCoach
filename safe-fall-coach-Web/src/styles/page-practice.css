@@ -1,6 +1,6 @@
 .practice-flex {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.45fr);
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 1fr);
   gap: 1rem;
   width: 100%;
   min-height: calc(100vh - 80px);
@@ -15,6 +15,7 @@
 }
 
 .camera-frame {
+  position: relative;
   width: 100%;
   height: 100%;
   min-height: 420px;
@@ -24,26 +25,141 @@
   color: var(--muted);
   border: 1px solid var(--border);
   border-radius: 24px;
+  overflow: hidden;
+}
+
+.camera-video,
+.pose-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.camera-video {
+  object-fit: contain;
+}
+
+.pose-overlay {
+  pointer-events: none;
+}
+
+.camera-placeholder {
+  position: relative;
+  z-index: 1;
+  padding: 1rem;
+  text-align: center;
 }
 
 .feedback-container {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 0.75rem;
-  padding: 1rem;
+  gap: 0.65rem;
+  padding: 0.85rem;
 }
 
 .feedback-box {
   flex: 1;
   overflow-y: auto;
   display: grid;
-  gap: 0.8rem;
+  gap: 0.7rem;
   align-content: start;
+  min-height: 0;
+  padding-right: 0.25rem;
 }
 
 .feedback-box p {
   margin: 0;
+}
+
+.feedback-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, #ffffff);
+  padding: 0.75rem;
+}
+
+.feedback-card-latest {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  box-shadow: 0 8px 24px rgb(15 23 42 / 8%);
+}
+
+.feedback-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.feedback-card-header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.feedback-icon {
+  flex: 0 0 auto;
+}
+
+.feedback-icon-alert {
+  color: #ffffff;
+  fill: #dc2626;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+
+.feedback-icon-info {
+  color: #2563eb;
+  stroke-width: 2.5;
+}
+
+.feedback-card-header strong {
+  color: var(--text);
+  font-size: 0.72rem;
+}
+
+.feedback-card-body {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.feedback-message {
+  white-space: pre-wrap;
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.feedback-card-latest .feedback-message {
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.severity-warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.severity-success {
+  border-left: 4px solid #16a34a;
+}
+
+.severity-error {
+  border-left: 4px solid #dc2626;
+}
+
+.severity-info,
+.severity-neutral {
+  border-left: 4px solid #2563eb;
 }
 
 .feedback-buttons {

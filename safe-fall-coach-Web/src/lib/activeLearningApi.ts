@@ -53,6 +53,23 @@ export interface SessionStartResponse {
   } | null;
 }
 
+export interface BodyLandmark {
+  index: number;
+  x: number;
+  y: number;
+  score: number;
+}
+
+export interface BodyLandmarkPerson {
+  landmarks: BodyLandmark[];
+}
+
+export interface BodyLandmarkPayload {
+  frame_width: number;
+  frame_height: number;
+  people: BodyLandmarkPerson[];
+}
+
 export async function getHealth(): Promise<HealthResponse> {
   return request<HealthResponse>('/health');
 }
@@ -64,10 +81,10 @@ export async function startCamera(cameraIndex = 0): Promise<{ status: string; ca
   });
 }
 
-export async function startSession(participantId = ''): Promise<SessionStartResponse> {
+export async function startSession(participantId = '', useClientCamera = true): Promise<SessionStartResponse> {
   return request('/session/start', {
     method: 'POST',
-    body: JSON.stringify({ participant_id: participantId }),
+    body: JSON.stringify({ participant_id: participantId, use_client_camera: useClientCamera }),
   });
 }
 
@@ -90,6 +107,7 @@ export interface StateMessage {
   fall_count?: number;
   pose_score?: number;
   fall_confidence?: number;
+  body_landmarks?: BodyLandmarkPayload;
   latest_feedback?: string;
   feedback_id?: number;
   severity?: 'info' | 'warning' | 'success' | 'error' | string;

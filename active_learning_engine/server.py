@@ -511,6 +511,7 @@ def _build_state() -> dict:
     with wizard._frame_lock:
         latest_feedback = wizard._latest_feedback
         pose_info = wizard._latest_pose_info
+        body_landmarks = wizard._latest_body_landmarks
         severity = wizard._latest_severity
         feedback_time = wizard._latest_feedback_time
         feedback_id = wizard._feedback_id
@@ -529,6 +530,7 @@ def _build_state() -> dict:
         "fall_count": stats.total_falls,
         "pose_score": pose_score,
         "fall_confidence": fall_confidence,
+        "body_landmarks": body_landmarks,
         "latest_feedback": latest_feedback,
         "feedback_id": feedback_id,
         "severity": severity,

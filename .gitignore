@@ -93,6 +93,9 @@ desktop.ini
 !.vscode/settings.json
 
 .claude/
+.codex/
+*.patch
+repair-*.py
 pyproject.toml
 passive_learning_worker.py
 launch_safefall.bat
