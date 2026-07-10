@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+active_learning_access.json
+active_learning_access.json.tmp
+analytics_events.json
+analytics_events.json.tmp

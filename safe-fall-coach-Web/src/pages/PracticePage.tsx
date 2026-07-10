@@ -19,12 +19,13 @@ interface FeedbackItem {
 
 type SkeletonGroup = 'left' | 'middle' | 'right';
 
-const MIN_LANDMARK_SCORE = 0.3;
+const MIN_LANDMARK_SCORE = 0.5;
 const SKELETON_COLORS: Record<SkeletonGroup, string> = {
   left: '#2563eb',
   middle: '#f97316',
   right: '#16a34a',
 };
+const LANDMARK_FALLBACK_COLOR = '#e11d48';
 const LANDMARK_GROUPS: Record<SkeletonGroup, number[]> = {
   left: [5, 7, 9, 11, 13, 15],
   middle: [0, 1, 2, 3, 4],
@@ -48,6 +49,7 @@ const SKELETON_CONNECTIONS: Array<[number, number, SkeletonGroup]> = [
   [5, 11, 'middle'],
   [6, 12, 'middle'],
 ];
+const PARTICIPANT_STORAGE_KEY = 'safefall.participantId';
 
 function drawBodyLandmarks(
   canvas: HTMLCanvasElement,
@@ -112,6 +114,7 @@ function drawBodyLandmarks(
       ctx.stroke();
     }
 
+    const drawnLandmarks = new Set<number>();
     for (const [group, indices] of Object.entries(LANDMARK_GROUPS) as Array<[SkeletonGroup, number[]]>) {
       ctx.fillStyle = SKELETON_COLORS[group];
       for (const index of indices) {
@@ -121,7 +124,17 @@ function drawBodyLandmarks(
         ctx.beginPath();
         ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
         ctx.fill();
+        drawnLandmarks.add(index);
       }
+    }
+
+    ctx.fillStyle = LANDMARK_FALLBACK_COLOR;
+    for (const landmark of person.landmarks) {
+      if (drawnLandmarks.has(landmark.index) || landmark.score < MIN_LANDMARK_SCORE) continue;
+      const point = mapPoint(landmark.x, landmark.y);
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 }
@@ -154,7 +167,9 @@ function FeedbackIcon({ severity }: { severity: string }) {
 export function PracticePage() {
   const [active, setActive] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Press “Start session” to use this device’s camera.');
+  const [participantId, setParticipantId] = useState(() => localStorage.getItem(PARTICIPANT_STORAGE_KEY) || '');
   const [state, setState] = useState<StateMessage | null>(null);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 
@@ -163,7 +178,7 @@ export function PracticePage() {
   const lastFeedbackId = useRef<number>(-1);
 
   // Captures the laptop webcam and streams JPEG frames to the backend /ws/ingest.
-  const webcam = useWebcamStream({ fps: 12 });
+  const webcam = useWebcamStream({ fps: 24 });
 
   // Close the live socket if the user navigates away mid-session.
   useEffect(() => {
@@ -220,14 +235,27 @@ export function PracticePage() {
 
   async function handleStart() {
     if (starting || active) return;
+    setShowDisclaimer(true);
+  }
+
+  async function beginActiveLearningSession() {
+    if (starting || active) return;
+    const normalizedParticipantId = participantId.trim();
+    if (!normalizedParticipantId) {
+      setShowDisclaimer(false);
+      setStatusMessage('Enter an approved participant ID before starting Active Learning Mode.');
+      return;
+    }
+    setShowDisclaimer(false);
     setStarting(true);
     try {
+      localStorage.setItem(PARTICIPANT_STORAGE_KEY, normalizedParticipantId);
       setStatusMessage('Requesting camera access…');
       await webcam.start();
       setStatusMessage('Starting session…');
       // No startCamera() — the server has no local camera; frames come from this
       // device over /ws/ingest. We still begin the research session for feedback.
-      const session = await startSession();
+      const session = await startSession(normalizedParticipantId);
       openStateSocket();
       setActive(true);
       setFeedback([]);
@@ -262,6 +290,40 @@ export function PracticePage() {
     : 'connecting to server…';
 
   return <div className="page-stack">
+    {showDisclaimer ? (
+      <div className="practice-modal-backdrop" role="presentation">
+        <section
+          className="practice-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="active-learning-disclaimer-title"
+        >
+          <div className="practice-modal-header">
+            <AlertTriangle aria-hidden="true" size={20} />
+            <h2 id="active-learning-disclaimer-title">Active Learning Mode Disclaimer</h2>
+          </div>
+          <p>
+            You are about to enter Active Learning Mode, which is a supervised practice session. Please ensure that you use this feature only under appropriate supervision. Use this feature carefully and at your own risk. The University of Central Florida and the application developers are not responsible for any injuries, incidents, or outcomes that may occur while using this feature. By continuing, you acknowledge and accept these conditions.
+          </p>
+          <div className="practice-modal-actions">
+            <button
+              className="button button-secondary"
+              type="button"
+              onClick={() => setShowDisclaimer(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="button button-primary"
+              type="button"
+              onClick={beginActiveLearningSession}
+            >
+              Continue
+            </button>
+          </div>
+        </section>
+      </div>
+    ) : null}
     <div className="practice-flex">
       <section className="card camera-box" aria-label="Camera preview area">
         <div className="camera-frame">
@@ -343,6 +405,13 @@ export function PracticePage() {
             )}
           </div>
           <div className="feedback-buttons">
+            <input
+              className="input participant-input"
+              value={participantId}
+              onChange={(event) => setParticipantId(event.target.value)}
+              placeholder="Participant ID"
+              disabled={active || starting}
+            />
             <button
               className="button button-primary"
               type="button"

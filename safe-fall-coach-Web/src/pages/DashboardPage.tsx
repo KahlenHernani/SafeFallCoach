@@ -6,10 +6,12 @@ import { progressStats } from '../data/mockData';
 import { routes } from '../data/routes';
 import { getHealth, startCamera, startSession } from '../lib/activeLearningApi';
 
+const PARTICIPANT_STORAGE_KEY = 'safefall.participantId';
+
 export function DashboardPage() {
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [backendMessage, setBackendMessage] = useState('Connecting to the Active Learning server...');
-  const [participantId, setParticipantId] = useState('');
+  const [participantId, setParticipantId] = useState(() => localStorage.getItem(PARTICIPANT_STORAGE_KEY) || '');
   const [sessionMessage, setSessionMessage] = useState('');
 
   useEffect(() => {
@@ -40,8 +42,10 @@ export function DashboardPage() {
   async function handleStartSession() {
     try {
       setSessionMessage('Starting session...');
+      const normalizedParticipantId = participantId.trim();
+      localStorage.setItem(PARTICIPANT_STORAGE_KEY, normalizedParticipantId);
+      const session = await startSession(normalizedParticipantId);
       await startCamera(0);
-      const session = await startSession(participantId.trim());
       setSessionMessage(`Session started: ${session.session_id || 'active'}`);
     } catch (error) {
       setSessionMessage(error instanceof Error ? error.message : 'Unable to start a session.');
@@ -59,6 +63,9 @@ export function DashboardPage() {
         </Link>
         <Link className="button button-secondary" to={routes.practice}>
           Practice with camera
+        </Link>
+        <Link className="button button-secondary" to={routes.activeLearningAccess}>
+          Request access
         </Link>
       </div>
     </section>

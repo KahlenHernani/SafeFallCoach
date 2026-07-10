@@ -8,6 +8,8 @@ import numpy as np
 from typing import Optional, Tuple, List
 from dataclasses import dataclass
 
+POSE_CONFIDENCE_THRESHOLD = 0.5
+
 
 @dataclass
 class PoseResult:
@@ -186,7 +188,7 @@ class PoseEstimator:
         kps_scores = pose_result.keypoints[..., 2:3]
 
         return draw_skeleton(output, kps_xy, kps_scores,
-                             kpt_thr=0.3, radius=circle_radius,
+                             kpt_thr=POSE_CONFIDENCE_THRESHOLD, radius=circle_radius,
                              line_width=thickness)
 
     def calculate_angles(self, pose_result: PoseResult) -> dict:
@@ -219,7 +221,7 @@ class PoseEstimator:
 
         try:
             # Left elbow angle
-            if all(keypoints[i][2] > 0.3 for i in [Keypoints.LEFT_SHOULDER, Keypoints.LEFT_ELBOW, Keypoints.LEFT_WRIST]):
+            if all(keypoints[i][2] >= POSE_CONFIDENCE_THRESHOLD for i in [Keypoints.LEFT_SHOULDER, Keypoints.LEFT_ELBOW, Keypoints.LEFT_WRIST]):
                 angles['left_elbow'] = angle_between_points(
                     keypoints[Keypoints.LEFT_SHOULDER],
                     keypoints[Keypoints.LEFT_ELBOW],
@@ -227,7 +229,7 @@ class PoseEstimator:
                 )
 
             # Right elbow angle
-            if all(keypoints[i][2] > 0.3 for i in [Keypoints.RIGHT_SHOULDER, Keypoints.RIGHT_ELBOW, Keypoints.RIGHT_WRIST]):
+            if all(keypoints[i][2] >= POSE_CONFIDENCE_THRESHOLD for i in [Keypoints.RIGHT_SHOULDER, Keypoints.RIGHT_ELBOW, Keypoints.RIGHT_WRIST]):
                 angles['right_elbow'] = angle_between_points(
                     keypoints[Keypoints.RIGHT_SHOULDER],
                     keypoints[Keypoints.RIGHT_ELBOW],
@@ -235,7 +237,7 @@ class PoseEstimator:
                 )
 
             # Left knee angle
-            if all(keypoints[i][2] > 0.3 for i in [Keypoints.LEFT_HIP, Keypoints.LEFT_KNEE, Keypoints.LEFT_ANKLE]):
+            if all(keypoints[i][2] >= POSE_CONFIDENCE_THRESHOLD for i in [Keypoints.LEFT_HIP, Keypoints.LEFT_KNEE, Keypoints.LEFT_ANKLE]):
                 angles['left_knee'] = angle_between_points(
                     keypoints[Keypoints.LEFT_HIP],
                     keypoints[Keypoints.LEFT_KNEE],
@@ -243,7 +245,7 @@ class PoseEstimator:
                 )
 
             # Right knee angle
-            if all(keypoints[i][2] > 0.3 for i in [Keypoints.RIGHT_HIP, Keypoints.RIGHT_KNEE, Keypoints.RIGHT_ANKLE]):
+            if all(keypoints[i][2] >= POSE_CONFIDENCE_THRESHOLD for i in [Keypoints.RIGHT_HIP, Keypoints.RIGHT_KNEE, Keypoints.RIGHT_ANKLE]):
                 angles['right_knee'] = angle_between_points(
                     keypoints[Keypoints.RIGHT_HIP],
                     keypoints[Keypoints.RIGHT_KNEE],
@@ -253,7 +255,7 @@ class PoseEstimator:
             # Torso angle (vertical alignment)
             mid_shoulder = (keypoints[Keypoints.LEFT_SHOULDER] + keypoints[Keypoints.RIGHT_SHOULDER]) / 2
             mid_hip = (keypoints[Keypoints.LEFT_HIP] + keypoints[Keypoints.RIGHT_HIP]) / 2
-            if mid_shoulder[2] > 0.3 and mid_hip[2] > 0.3:
+            if mid_shoulder[2] >= POSE_CONFIDENCE_THRESHOLD and mid_hip[2] >= POSE_CONFIDENCE_THRESHOLD:
                 # Angle from vertical
                 dx = mid_shoulder[0] - mid_hip[0]
                 dy = mid_shoulder[1] - mid_hip[1]

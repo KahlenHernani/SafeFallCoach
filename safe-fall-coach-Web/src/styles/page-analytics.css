@@ -1,0 +1,162 @@
+.analytics-page {
+  gap: 1rem;
+}
+
+.analytics-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.analytics-hero .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.analytics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.analytics-kpi {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.analytics-kpi svg {
+  color: var(--primary);
+}
+
+.analytics-kpi span,
+.training-metrics span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.analytics-kpi strong {
+  font-size: 1.75rem;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.chart-frame {
+  width: 100%;
+  min-height: 260px;
+}
+
+.chart-frame-compact {
+  min-height: 180px;
+}
+
+.journey-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.journey-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem 0.75rem;
+  align-items: center;
+}
+
+.journey-row > div:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.journey-row > div:first-child span {
+  overflow-wrap: anywhere;
+}
+
+.journey-bar {
+  grid-column: 1 / -1;
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.journey-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #2563eb;
+}
+
+.heatmap-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(46px, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.heat-cell {
+  display: grid;
+  place-items: center;
+  min-height: 58px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: #0f172a;
+}
+
+.heat-cell strong {
+  font-size: 0.82rem;
+}
+
+.heat-cell span {
+  font-size: 0.78rem;
+}
+
+.training-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.training-metrics div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.training-metrics strong {
+  font-size: 1.25rem;
+}
+
+.demo-script {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .analytics-hero {
+    flex-direction: column;
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .training-metrics,
+  .heatmap-row {
+    grid-template-columns: 1fr;
+  }
+}

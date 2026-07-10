@@ -12,9 +12,13 @@ export function TrainingPage() {
     <div className="video-grid">
       {trainingVideos.map((video) => (
         <article className="card video-card" key={video.id}>
-          <div className="video-preview" aria-hidden="true">
-            Video preview
-          </div>
+          <video
+            className="video-preview"
+            src={video.source}
+            controls
+            preload="auto"
+            playsInline
+          />
           <h2>{video.title}</h2>
           <p>{video.summary}</p>
           <div className="tag-row">

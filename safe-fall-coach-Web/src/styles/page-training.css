@@ -24,7 +24,15 @@
   color: var(--muted);
 }
 
-.video-preview,
+.video-preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: #0f172a;
+  border: 1px solid var(--border);
+  object-fit: contain;
+}
+
 .camera-frame {
   min-height: 200px;
   border-radius: 20px;
