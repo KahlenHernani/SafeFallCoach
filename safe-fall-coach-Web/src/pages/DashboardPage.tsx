@@ -5,23 +5,22 @@ import { SectionCard } from '../components/SectionCard';
 import { progressStats } from '../data/mockData';
 import { routes } from '../data/routes';
 import { getHealth, startCamera, startSession } from '../lib/activeLearningApi';
-
-const PARTICIPANT_STORAGE_KEY = 'safefall.participantId';
+import { useAuth } from '../context/AuthContext';
+import { useActiveLearningAccess } from '../hooks/useActiveLearningAccess';
 
 export function DashboardPage() {
+  const { user } = useAuth();
+  const { hasPracticeAccess } = useActiveLearningAccess();
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [backendMessage, setBackendMessage] = useState('Connecting to the Active Learning server...');
-  const [participantId, setParticipantId] = useState(() => localStorage.getItem(PARTICIPANT_STORAGE_KEY) || '');
   const [sessionMessage, setSessionMessage] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-
     async function loadHealth() {
       try {
         const health = await getHealth();
         if (cancelled) return;
-
         setBackendStatus(health.status === 'ok' ? 'online' : 'offline');
         setBackendMessage(health.status === 'ok' ? 'Server connected.' : 'Server is starting up.');
       } catch (error) {
@@ -31,20 +30,15 @@ export function DashboardPage() {
         }
       }
     }
-
     void loadHealth();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   async function handleStartSession() {
+    if (!user) return;
     try {
       setSessionMessage('Starting session...');
-      const normalizedParticipantId = participantId.trim();
-      localStorage.setItem(PARTICIPANT_STORAGE_KEY, normalizedParticipantId);
-      const session = await startSession(normalizedParticipantId);
+      const session = await startSession(user.id);
       await startCamera(0);
       setSessionMessage(`Session started: ${session.session_id || 'active'}`);
     } catch (error) {
@@ -58,34 +52,25 @@ export function DashboardPage() {
       <h1>Your SafeFall Coach dashboard</h1>
       <p className="lead">One place for lessons, practice, and feedback.</p>
       <div className="button-row">
-        <Link className="button button-primary" to={routes.training}>
-          Start a lesson
-        </Link>
-        <Link className="button button-secondary" to={routes.practice}>
-          Practice with camera
-        </Link>
-        <Link className="button button-secondary" to={routes.activeLearningAccess}>
-          Request access
-        </Link>
+        <Link className="button button-primary" to={routes.training}>Start a lesson</Link>
+        {hasPracticeAccess ? (
+          <Link className="button button-secondary" to={routes.practice}>Practice with camera</Link>
+        ) : (
+          <Link className="button button-secondary" to={routes.activeLearningAccess}>Request access</Link>
+        )}
       </div>
     </section>
 
-    <SectionCard title="Active Learning connection">
-      <p>Status: <strong>{backendStatus}</strong></p>
-      <p>{backendMessage}</p>
-      <div className="button-row">
-        <input
-          value={participantId}
-          onChange={(event) => setParticipantId(event.target.value)}
-          placeholder="Participant ID"
-          className="input"
-        />
-        <button className="button button-primary" onClick={handleStartSession}>
-          Start session
-        </button>
-      </div>
-      {sessionMessage ? <p>{sessionMessage}</p> : null}
-    </SectionCard>
+    {hasPracticeAccess ? (
+      <SectionCard title="Active Learning connection">
+        <p>Status: <strong>{backendStatus}</strong></p>
+        <p>{backendMessage}</p>
+        <div className="button-row">
+          <button className="button button-primary" onClick={handleStartSession}>Start session</button>
+        </div>
+        {sessionMessage ? <p>{sessionMessage}</p> : null}
+      </SectionCard>
+    ) : null}
 
     <div className="stats-grid">
       {progressStats.map((item) => (

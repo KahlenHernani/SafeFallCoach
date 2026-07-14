@@ -10,6 +10,8 @@ import {
   type StateMessage,
 } from '../lib/activeLearningApi';
 import { useWebcamStream } from '../lib/useWebcamStream';
+import { useAuth } from '../context/AuthContext';
+import { useActiveLearningAccess } from '../hooks/useActiveLearningAccess';
 
 interface FeedbackItem {
   id: number;
@@ -49,7 +51,7 @@ const SKELETON_CONNECTIONS: Array<[number, number, SkeletonGroup]> = [
   [5, 11, 'middle'],
   [6, 12, 'middle'],
 ];
-const PARTICIPANT_STORAGE_KEY = 'safefall.participantId';
+
 
 function drawBodyLandmarks(
   canvas: HTMLCanvasElement,
@@ -169,7 +171,8 @@ export function PracticePage() {
   const [starting, setStarting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Press “Start session” to use this device’s camera.');
-  const [participantId, setParticipantId] = useState(() => localStorage.getItem(PARTICIPANT_STORAGE_KEY) || '');
+  const { user } = useAuth();
+const { hasPracticeAccess } = useActiveLearningAccess();
   const [state, setState] = useState<StateMessage | null>(null);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 
@@ -240,22 +243,18 @@ export function PracticePage() {
 
   async function beginActiveLearningSession() {
     if (starting || active) return;
-    const normalizedParticipantId = participantId.trim();
-    if (!normalizedParticipantId) {
-      setShowDisclaimer(false);
-      setStatusMessage('Enter an approved participant ID before starting Active Learning Mode.');
-      return;
-    }
-    setShowDisclaimer(false);
-    setStarting(true);
-    try {
-      localStorage.setItem(PARTICIPANT_STORAGE_KEY, normalizedParticipantId);
-      setStatusMessage('Requesting camera access…');
-      await webcam.start();
-      setStatusMessage('Starting session…');
-      // No startCamera() — the server has no local camera; frames come from this
-      // device over /ws/ingest. We still begin the research session for feedback.
-      const session = await startSession(normalizedParticipantId);
+    if (!user) {
+  setShowDisclaimer(false);
+  setStatusMessage('You must be signed in to start Active Learning Mode.');
+  return;
+}
+setShowDisclaimer(false);
+setStarting(true);
+try {
+  setStatusMessage('Requesting camera access…');
+  await webcam.start();
+  setStatusMessage('Starting session…');
+  const session = await startSession(user.id);
       openStateSocket();
       setActive(true);
       setFeedback([]);
@@ -405,13 +404,6 @@ export function PracticePage() {
             )}
           </div>
           <div className="feedback-buttons">
-            <input
-              className="input participant-input"
-              value={participantId}
-              onChange={(event) => setParticipantId(event.target.value)}
-              placeholder="Participant ID"
-              disabled={active || starting}
-            />
             <button
               className="button button-primary"
               type="button"

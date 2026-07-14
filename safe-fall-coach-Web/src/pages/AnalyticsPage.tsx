@@ -17,6 +17,27 @@ import {
 import { Activity, BarChart3, Clock3, RefreshCw, Route, TrendingUp } from 'lucide-react';
 import { SectionCard } from '../components/SectionCard';
 import { getAnalyticsDashboard, type AnalyticsDashboard } from '../lib/activeLearningApi';
+import { useCallback } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import {
+  decideActiveLearningRequest,
+  listActiveLearningRequests,
+  setActiveLearningEnabled,
+  type ActiveLearningAccess,
+} from '../lib/activeLearningApi';
+import { CheckCircle2, XCircle } from 'lucide-react';
+
+
+
+type UserRow = {
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  role: string | null;
+};
+
+type MergedUser = UserRow & { access: ActiveLearningAccess | null };
 
 const journeyLabels: Record<keyof AnalyticsDashboard['journey'], string> = {
   registration_to_onboarding: 'Registration to onboarding',
@@ -34,6 +55,52 @@ function percent(value: number) {
 export function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsDashboard | null>(null);
   const [message, setMessage] = useState('Loading analytics...');
+  const [users, setUsers] = useState<MergedUser[]>([]);
+  const [usersMessage, setUsersMessage] = useState('Loading users...');
+
+const loadUsers = useCallback(async () => {
+  try {
+    setUsersMessage('Loading users...');
+    const [{ data: userRows, error }, requests] = await Promise.all([
+      supabase.from('users').select('user_id, first_name, last_name, email, role'),
+      listActiveLearningRequests(),
+    ]);
+    if (error) throw error;
+
+    const accessByParticipant = new Map(requests.users.map((a) => [a.participant_id, a]));
+    const merged: MergedUser[] = (userRows ?? []).map((u) => ({
+      ...u,
+      access: accessByParticipant.get(u.user_id) ?? null,
+    }));
+    setUsers(merged);
+    setUsersMessage('');
+  } catch (error) {
+    setUsersMessage(error instanceof Error ? error.message : 'Unable to load users.');
+  }
+}, []);
+
+useEffect(() => {
+  void loadUsers();
+}, [loadUsers]);
+
+async function handleDecision(participantId: string, status: 'approved' | 'rejected') {
+  try {
+    await decideActiveLearningRequest(participantId, status);
+    await loadUsers();
+  } catch (error) {
+    setUsersMessage(error instanceof Error ? error.message : 'Unable to update request.');
+  }
+}
+
+async function handleToggleEnabled(participantId: string, enabled: boolean) {
+  try {
+    await setActiveLearningEnabled(participantId, enabled);
+    await loadUsers();
+  } catch (error) {
+    setUsersMessage(error instanceof Error ? error.message : 'Unable to update access.');
+  }
+}
+
 
   async function loadAnalytics() {
     try {
@@ -78,6 +145,59 @@ export function AnalyticsPage() {
         <RefreshCw size={16} /> Refresh
       </button>
     </section>
+
+    <SectionCard title="Users & access requests">
+  {usersMessage ? <p className="helper-text">{usersMessage}</p> : null}
+  <div className="access-table-wrap">
+    <table className="access-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Request</th>
+          <th>Access</th>
+          <th>Today's usage</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {users.length > 0 ? users.map((u) => {
+          const status = u.access?.request_status ?? 'none';
+          const enabled = u.access?.enabled ?? false;
+          return (
+            <tr key={u.user_id}>
+              <td>
+                <div>{u.first_name} {u.last_name}</div>
+                <div className="helper-text">{u.email}{u.role === 'admin' ? ' · admin' : ''}</div>
+              </td>
+              <td><span className={`access-status status-${status}`}>{status}</span></td>
+              <td>{enabled ? 'Enabled' : 'Disabled'}</td>
+              <td>
+                {u.access
+                  ? `${u.access.daily_sessions_used}/${u.access.daily_session_limit} sessions, ${Math.floor(u.access.daily_seconds_used / 60)}m used`
+                  : '—'}
+              </td>
+              <td>
+                <div className="access-actions">
+                  <button className="button button-secondary" type="button" onClick={() => void handleDecision(u.user_id, 'approved')}>
+                    <CheckCircle2 size={16} /> Approve
+                  </button>
+                  <button className="button button-secondary" type="button" onClick={() => void handleDecision(u.user_id, 'rejected')}>
+                    <XCircle size={16} /> Reject
+                  </button>
+                  <button className="button button-primary" type="button" onClick={() => void handleToggleEnabled(u.user_id, !enabled)}>
+                    {enabled ? 'Disable' : 'Enable'}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          );
+        }) : (
+          <tr><td colSpan={5}>No users yet.</td></tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</SectionCard>
 
     {analytics ? (
       <>
