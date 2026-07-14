@@ -9,6 +9,11 @@
   gap: 1rem;
 }
 
+.status-unknown {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
 .access-panel {
   display: grid;
   gap: 0.85rem;

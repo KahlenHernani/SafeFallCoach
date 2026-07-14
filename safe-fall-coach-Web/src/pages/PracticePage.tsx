@@ -11,7 +11,6 @@ import {
 } from '../lib/activeLearningApi';
 import { useWebcamStream } from '../lib/useWebcamStream';
 import { useAuth } from '../context/AuthContext';
-import { useActiveLearningAccess } from '../hooks/useActiveLearningAccess';
 
 interface FeedbackItem {
   id: number;
@@ -172,7 +171,6 @@ export function PracticePage() {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Press “Start session” to use this device’s camera.');
   const { user } = useAuth();
-const { hasPracticeAccess } = useActiveLearningAccess();
   const [state, setState] = useState<StateMessage | null>(null);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 

@@ -12,7 +12,7 @@ function statusClass(status: string) {
 }
 
 export function ActiveLearningAccessPage() {
-  const { access, loading, requestAccess } = useActiveLearningAccess();
+  const { access, loading, error, requestAccess } = useActiveLearningAccess();
 
   return <div className="page-stack">
     <section className="card access-hero">
@@ -32,6 +32,7 @@ export function ActiveLearningAccessPage() {
             <p>Today: {access.daily_sessions_used}/{access.daily_session_limit} sessions, {formatMinutes(access.daily_seconds_used)}/{formatMinutes(access.daily_limit_seconds)} used.</p>
           </div>
         ) : null}
+        {error ? <p className="helper-text" style={{ color: '#dc2626' }}>{error}</p> : null}
         {(!access || access.request_status === 'none' || access.request_status === 'rejected') ? (
           <button className="button button-primary" type="button" onClick={() => void requestAccess()}>
             <ShieldCheck size={16} /> Request Active Learning

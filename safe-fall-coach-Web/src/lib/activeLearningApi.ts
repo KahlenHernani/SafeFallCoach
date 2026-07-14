@@ -1,18 +1,29 @@
+import { supabase } from './supabaseClient';
+
 const DEFAULT_BASE_URL = import.meta.env.VITE_ACTIVE_LEARNING_API_URL || 'http://127.0.0.1:8000';
 const API_BASE_URL = DEFAULT_BASE_URL.replace(/\/$/, '');
+const ACTIVE_LEARNING_DAILY_SECONDS_LIMIT = 30 * 60;
+const ACTIVE_LEARNING_DAILY_SESSION_LIMIT = 20;
 
 interface ApiErrorShape {
   error?: unknown;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-    ...options,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+      ...options,
+    });
+  } catch {
+    throw new Error(
+      `Cannot reach the Active Learning server at ${API_BASE_URL}. Make sure the SSH tunnel is open and the server is running.`
+    );
+  }
 
   const text = await response.text();
   let data: unknown = null;
@@ -69,6 +80,66 @@ export interface ActiveLearningAccess {
 
 export interface ActiveLearningAdminList {
   users: ActiveLearningAccess[];
+}
+
+type ActiveLearningRequestRow = {
+  id: string;
+  user_id: string;
+  status: string;
+  requested_at: string;
+  reviewed_at: string | null;
+};
+
+type ActiveLearningUserRow = {
+  user_id: string;
+  active_learning_enabled: boolean | null;
+};
+
+function accessFromRows(
+  participantId: string,
+  requestRow: ActiveLearningRequestRow | null,
+  userRow: ActiveLearningUserRow | null,
+): ActiveLearningAccess {
+  const secondsUsed = 0;
+  const sessionsUsed = 0;
+
+  return {
+    participant_id: participantId,
+    request_status: requestRow?.status ?? 'none',
+    enabled: Boolean(userRow?.active_learning_enabled),
+    requested_at: requestRow?.requested_at ?? null,
+    reviewed_at: requestRow?.reviewed_at ?? null,
+    daily_limit_seconds: ACTIVE_LEARNING_DAILY_SECONDS_LIMIT,
+    daily_session_limit: ACTIVE_LEARNING_DAILY_SESSION_LIMIT,
+    daily_seconds_used: secondsUsed,
+    daily_seconds_remaining: ACTIVE_LEARNING_DAILY_SECONDS_LIMIT - secondsUsed,
+    daily_sessions_used: sessionsUsed,
+    daily_sessions_remaining: ACTIVE_LEARNING_DAILY_SESSION_LIMIT - sessionsUsed,
+  };
+}
+
+async function loadActiveLearningAccess(participantId: string): Promise<ActiveLearningAccess> {
+  const [{ data: requestRow, error: requestError }, { data: userRow, error: userError }] = await Promise.all([
+    supabase
+      .from('active_learning_requests')
+      .select('id, user_id, status, requested_at, reviewed_at')
+      .eq('user_id', participantId)
+      .maybeSingle(),
+    supabase
+      .from('users')
+      .select('user_id, active_learning_enabled')
+      .eq('user_id', participantId)
+      .maybeSingle(),
+  ]);
+
+  if (requestError) throw requestError;
+  if (userError) throw userError;
+
+  return accessFromRows(
+    participantId,
+    requestRow as ActiveLearningRequestRow | null,
+    userRow as ActiveLearningUserRow | null,
+  );
 }
 
 export interface AnalyticsDashboard {
@@ -200,35 +271,125 @@ export async function stopSession(): Promise<unknown> {
 }
 
 export async function getActiveLearningAccess(participantId: string): Promise<ActiveLearningAccess> {
-  return request(`/active-learning/access/${encodeURIComponent(participantId)}`);
+  return loadActiveLearningAccess(participantId);
 }
 
 export async function requestActiveLearningAccess(participantId: string): Promise<ActiveLearningAccess> {
-  return request('/active-learning/requests', {
-    method: 'POST',
-    body: JSON.stringify({ participant_id: participantId }),
-  });
+  const now = new Date().toISOString();
+  const { data: existing, error: loadError } = await supabase
+    .from('active_learning_requests')
+    .select('id, status')
+    .eq('user_id', participantId)
+    .maybeSingle();
+
+  if (loadError) throw loadError;
+
+  if (existing) {
+    if (existing.status !== 'approved') {
+      const { error } = await supabase
+        .from('active_learning_requests')
+        .update({ status: 'pending', requested_at: now, reviewed_at: null, reviewed_by: null, notes: null })
+        .eq('id', existing.id);
+      if (error) throw error;
+    }
+  } else {
+    const { error } = await supabase
+      .from('active_learning_requests')
+      .insert({ id: crypto.randomUUID(), user_id: participantId, status: 'pending', requested_at: now });
+    if (error) throw error;
+  }
+
+  return loadActiveLearningAccess(participantId);
 }
 
 export async function listActiveLearningRequests(): Promise<ActiveLearningAdminList> {
-  return request('/admin/active-learning/requests');
+  const [{ data: requestRows, error: requestError }, { data: userRows, error: userError }] = await Promise.all([
+    supabase
+      .from('active_learning_requests')
+      .select('id, user_id, status, requested_at, reviewed_at'),
+    supabase
+      .from('users')
+      .select('user_id, active_learning_enabled'),
+  ]);
+
+  if (requestError) throw requestError;
+  if (userError) throw userError;
+
+  const usersById = new Map(
+    ((userRows ?? []) as ActiveLearningUserRow[]).map((row) => [row.user_id, row])
+  );
+  const requestByUserId = new Map(
+    ((requestRows ?? []) as ActiveLearningRequestRow[]).map((row) => [row.user_id, row])
+  );
+  const participantIds = new Set([...usersById.keys(), ...requestByUserId.keys()]);
+
+  return {
+    users: [...participantIds]
+      .sort()
+      .map((participantId) => accessFromRows(
+        participantId,
+        requestByUserId.get(participantId) ?? null,
+        usersById.get(participantId) ?? null,
+      )),
+  };
 }
 
 export async function decideActiveLearningRequest(
   participantId: string,
   status: 'pending' | 'approved' | 'rejected',
 ): Promise<ActiveLearningAccess> {
-  return request(`/admin/active-learning/requests/${encodeURIComponent(participantId)}`, {
-    method: 'POST',
-    body: JSON.stringify({ status }),
-  });
+  const now = new Date().toISOString();
+  const { data: existing, error: loadError } = await supabase
+    .from('active_learning_requests')
+    .select('id')
+    .eq('user_id', participantId)
+    .maybeSingle();
+
+  if (loadError) throw loadError;
+
+  if (existing) {
+    const { error } = await supabase
+      .from('active_learning_requests')
+      .update({ status, reviewed_at: now })
+      .eq('id', existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('active_learning_requests')
+      .insert({
+        id: crypto.randomUUID(),
+        user_id: participantId,
+        status,
+        requested_at: now,
+        reviewed_at: now,
+      });
+    if (error) throw error;
+  }
+
+  const { error: userError } = await supabase
+    .from('users')
+    .update({ active_learning_enabled: status === 'approved' })
+    .eq('user_id', participantId);
+  if (userError) throw userError;
+
+  return loadActiveLearningAccess(participantId);
 }
 
 export async function setActiveLearningEnabled(participantId: string, enabled: boolean): Promise<ActiveLearningAccess> {
-  return request(`/admin/active-learning/users/${encodeURIComponent(participantId)}/enabled`, {
-    method: 'POST',
-    body: JSON.stringify({ enabled }),
-  });
+  const { error } = await supabase
+    .from('users')
+    .update({ active_learning_enabled: enabled })
+    .eq('user_id', participantId);
+  if (error) throw error;
+
+  if (enabled) {
+    const access = await loadActiveLearningAccess(participantId);
+    if (access.request_status === 'none') {
+      return decideActiveLearningRequest(participantId, 'approved');
+    }
+  }
+
+  return loadActiveLearningAccess(participantId);
 }
 
 export async function getAnalyticsDashboard(): Promise<AnalyticsDashboard> {
