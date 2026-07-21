@@ -1,0 +1,78 @@
+.admin-tab-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.admin-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.admin-toolbar {
+  margin-bottom: 0.75rem;
+}
+
+.admin-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 0 0.75rem;
+  background: white;
+  max-width: 420px;
+}
+
+.admin-search input {
+  border: none;
+  margin: 0;
+  padding: 0.7rem 0;
+}
+
+.admin-search input:focus {
+  outline: none;
+}
+
+.admin-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(15 23 42 / 55%);
+  overflow-y: auto;
+}
+
+.admin-modal {
+  width: min(100%, 640px);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 24px 64px rgb(15 23 42 / 25%);
+  padding: 1.25rem;
+  display: grid;
+  gap: 0.25rem;
+}

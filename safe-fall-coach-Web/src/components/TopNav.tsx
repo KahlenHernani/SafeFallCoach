@@ -29,6 +29,7 @@ export function TopNav() {
         <nav className="desktop-nav" aria-label="Primary">
           <NavLink to={routes.home} className={navLinkClass}>Home</NavLink>
           {isAdmin && <NavLink to={routes.analytics} className={navLinkClass}>Analytics</NavLink>}
+          {isAdmin && <NavLink to={routes.admin} className={navLinkClass}>Admin</NavLink>}
           {!isAdmin && (
             hasPracticeAccess
               ? <NavLink to={routes.practice} className={navLinkClass}>Practice</NavLink>
@@ -60,6 +61,7 @@ export function TopNav() {
       <nav className={menuOpen ? 'mobile-nav open' : 'mobile-nav'} aria-label="Mobile primary">
         <NavLink to={routes.home} className={navLinkClass} onClick={closeMenu}>Home</NavLink>
         {isAdmin && <NavLink to={routes.analytics} className={navLinkClass} onClick={closeMenu}>Analytics</NavLink>}
+        {isAdmin && <NavLink to={routes.admin} className={navLinkClass}>Admin</NavLink>}
         {!isAdmin && (
           hasPracticeAccess
             ? <NavLink to={routes.practice} className={navLinkClass} onClick={closeMenu}>Practice</NavLink>

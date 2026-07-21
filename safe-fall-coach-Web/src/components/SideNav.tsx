@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { routes } from '../data/routes';
-import { Home, PlayCircle, Camera, Settings2, ShieldCheck, BarChart3 } from 'lucide-react';
+import { Home, PlayCircle, Camera, Settings2, ShieldCheck, BarChart3, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useActiveLearningAccess } from '../hooks/useActiveLearningAccess';
 
@@ -15,6 +15,7 @@ export function SideNav() {
     <aside className="side-nav" aria-label="Secondary">
       <NavLink to={routes.dashboard} className={itemClass}><Home size={18} /> Dashboard</NavLink>
       {isAdmin && <NavLink to={routes.analytics} className={itemClass}><BarChart3 size={18} /> Analytics</NavLink>}
+      {isAdmin && <NavLink to={routes.admin} className={itemClass}><LayoutDashboard size={18} /> Admin</NavLink>}
       {!isAdmin && (
         hasPracticeAccess
           ? <NavLink to={routes.practice} className={itemClass}><Camera size={18} /> Practice</NavLink>

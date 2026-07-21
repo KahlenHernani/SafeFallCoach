@@ -7,5 +7,8 @@ export const routes = {
   activeLearningAccess: '/active-learning-access',
   training: '/training',
   practice: '/practice',
+  admin: '/admin',
   accessibility: '/accessibility',
 } as const;
+
+

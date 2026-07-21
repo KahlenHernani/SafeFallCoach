@@ -12,6 +12,7 @@ import { ActiveLearningAccessPage } from './pages/ActiveLearningAccessPage';
 import { TrainingPage } from './pages/TrainingPage';
 import { PracticePage } from './pages/PracticePage';
 import { AccessibilityPage } from './pages/AccessibilityPage';
+import { AdminPage } from './pages/admin/AdminPage';
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
           {/* Analytics — admins only */}
           <Route element={<RequireAdmin />}>
             <Route path={routes.analytics} element={<AnalyticsPage />} />
+            <Route path={routes.admin} element={<AdminPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to={routes.home} replace />} />
