@@ -25,6 +25,7 @@ import {
   setActiveLearningEnabled,
   type ActiveLearningAccess,
 } from '../lib/activeLearningApi';
+import { sendAccessGrantedEmail } from '../lib/accessEmailApi';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
 
@@ -87,7 +88,21 @@ useEffect(() => {
 async function handleDecision(participantId: string, status: 'approved' | 'rejected') {
   try {
     await decideActiveLearningRequest(participantId, status);
+    let emailMessage = '';
+    if (status === 'approved') {
+      const approvedUser = users.find((user) => user.user_id === participantId);
+      if (approvedUser) {
+        const emailResult = await sendAccessGrantedEmail({
+          userId: approvedUser.user_id,
+          email: approvedUser.email,
+          firstName: approvedUser.first_name,
+          lastName: approvedUser.last_name,
+        });
+        emailMessage = emailResult.message;
+      }
+    }
     await loadUsers();
+    if (emailMessage) setUsersMessage(emailMessage);
   } catch (error) {
     setUsersMessage(error instanceof Error ? error.message : 'Unable to update request.');
   }
@@ -140,7 +155,7 @@ async function handleToggleEnabled(participantId: string, enabled: boolean) {
       <div>
         <p className="eyebrow">Admin analytics</p>
         <h1>Dashboard and usage analytics</h1>
-        <p className="lead">Demo-ready engagement, journey, heatmap, and training completion metrics.</p>
+        <p className="lead">Database-backed engagement, journey, heatmap, and training completion metrics.</p>
       </div>
       <button className="button button-secondary" type="button" onClick={() => void loadAnalytics()}>
         <RefreshCw size={16} /> Refresh
@@ -164,6 +179,8 @@ async function handleToggleEnabled(participantId: string, enabled: boolean) {
         {users.length > 0 ? users.map((u) => {
           const status = u.access?.request_status ?? 'none';
           const enabled = u.access?.enabled ?? false;
+          const isAdmin = u.role === 'admin';
+          const isApproved = status === 'approved';
           return (
             <tr key={u.user_id}>
               <td>
@@ -178,17 +195,29 @@ async function handleToggleEnabled(participantId: string, enabled: boolean) {
                   : '—'}
               </td>
               <td>
-                <div className="access-actions">
-                  <button className="button button-secondary" type="button" onClick={() => void handleDecision(u.user_id, 'approved')}>
-                    <CheckCircle2 size={16} /> Approve
-                  </button>
-                  <button className="button button-secondary" type="button" onClick={() => void handleDecision(u.user_id, 'rejected')}>
-                    <XCircle size={16} /> Reject
-                  </button>
-                  <button className="button button-primary" type="button" onClick={() => void handleToggleEnabled(u.user_id, !enabled)}>
-                    {enabled ? 'Disable' : 'Enable'}
-                  </button>
-                </div>
+                {isAdmin ? (
+                  <span className="helper-text">Admin account</span>
+                ) : (
+                  <div className="access-actions">
+                    {!isApproved ? (
+                      <>
+                        <button className="button button-secondary" type="button" onClick={() => void handleDecision(u.user_id, 'approved')}>
+                          <CheckCircle2 size={16} /> Approve
+                        </button>
+                        <button className="button button-secondary" type="button" onClick={() => void handleDecision(u.user_id, 'rejected')}>
+                          <XCircle size={16} /> Reject
+                        </button>
+                        <button className="button button-primary" type="button" onClick={() => void handleToggleEnabled(u.user_id, !enabled)}>
+                          {enabled ? 'Disable' : 'Enable'}
+                        </button>
+                      </>
+                    ) : (
+                      <button className="button button-secondary" type="button" onClick={() => void handleDecision(u.user_id, 'rejected')}>
+                        <XCircle size={16} /> Revoke access
+                      </button>
+                    )}
+                  </div>
+                )}
               </td>
             </tr>
           );
@@ -328,11 +357,11 @@ async function handleToggleEnabled(participantId: string, enabled: boolean) {
             </div>
           </SectionCard>
 
-          <SectionCard title="Demo talk track">
+          <SectionCard title="Admin review notes">
             <ol className="demo-script">
-              <li>Open this page and start with DAU, WAU, and MAU to show the admin can monitor engagement.</li>
-              <li>Use the growth trend to explain whether usage is improving over time.</li>
-              <li>Walk through each journey conversion to show where participants drop out.</li>
+              <li>Start with DAU, WAU, and MAU to monitor real user activity.</li>
+              <li>Use the growth trend to compare recent weekly engagement.</li>
+              <li>Walk through each journey conversion to identify where participants drop out.</li>
               <li>Use the heatmap to decide when reminders or supervised sessions should be scheduled.</li>
               <li>Use training completion metrics to identify lessons with high drop-off.</li>
             </ol>

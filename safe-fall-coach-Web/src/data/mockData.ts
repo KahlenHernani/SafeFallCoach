@@ -30,7 +30,7 @@ function summaryFromTitle(title: string) {
 export const trainingVideos = videoFiles
   .map(([title, source], index) => {
     return {
-      id: index + 1,
+      id: String(index + 1),
       title,
       duration: 'Video',
       level: 'Demo',

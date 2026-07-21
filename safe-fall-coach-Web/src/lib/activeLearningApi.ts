@@ -229,6 +229,223 @@ function demoAnalyticsDashboard(): AnalyticsDashboard {
   return structuredClone(DEMO_ANALYTICS_DASHBOARD);
 }
 
+type AnalyticsUserRow = {
+  user_id: string;
+  created_at: string | null;
+  last_login: string | null;
+  is_active: boolean | null;
+  last_survey_submitted_at: string | null;
+  active_learning_enabled: boolean | null;
+};
+
+type VideoProgressRow = {
+  user_id: string;
+  last_watched_at: string | null;
+  updated_at: string | null;
+  progress_percentage: number | null;
+  is_completed: boolean | null;
+};
+
+type FallRow = {
+  user_id: string | null;
+  timestamp: string;
+};
+
+type AnalyticsAccessRequestRow = {
+  user_id: string;
+  status: string;
+  requested_at: string;
+  reviewed_at: string | null;
+};
+
+function asDate(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function daysAgo(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date;
+}
+
+function dayKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function percentOf(numerator: number, denominator: number) {
+  return denominator > 0 ? Math.round((numerator / denominator) * 1000) / 10 : 0;
+}
+
+function dateLabel(date: Date) {
+  return date.toLocaleDateString(undefined, { month: 'short', day: '2-digit' });
+}
+
+function buildDatabaseAnalyticsDashboard(
+  users: AnalyticsUserRow[],
+  progressRows: VideoProgressRow[],
+  fallRows: FallRow[],
+  requestRows: AnalyticsAccessRequestRow[],
+): AnalyticsDashboard {
+  const now = new Date();
+  const today = dayKey(now);
+  const weekStart = daysAgo(6);
+  const monthStart = daysAgo(29);
+  const userById = new Map(users.map((user) => [user.user_id, user]));
+
+  const activityEvents: Array<{ userId: string; date: Date }> = [];
+  for (const user of users) {
+    const lastLogin = asDate(user.last_login);
+    if (lastLogin) activityEvents.push({ userId: user.user_id, date: lastLogin });
+    const createdAt = asDate(user.created_at);
+    if (createdAt) activityEvents.push({ userId: user.user_id, date: createdAt });
+  }
+  for (const row of progressRows) {
+    const watchedAt = asDate(row.last_watched_at) ?? asDate(row.updated_at);
+    if (watchedAt) activityEvents.push({ userId: row.user_id, date: watchedAt });
+  }
+  for (const row of fallRows) {
+    const timestamp = asDate(row.timestamp);
+    if (timestamp && row.user_id) activityEvents.push({ userId: row.user_id, date: timestamp });
+  }
+  for (const row of requestRows) {
+    const requestedAt = asDate(row.requested_at);
+    if (requestedAt) activityEvents.push({ userId: row.user_id, date: requestedAt });
+  }
+
+  const uniqueUsersSince = (start: Date) => new Set(
+    activityEvents
+      .filter((event) => event.date >= start)
+      .map((event) => event.userId)
+  ).size;
+
+  const dau = new Set(
+    activityEvents
+      .filter((event) => dayKey(event.date) === today)
+      .map((event) => event.userId)
+  ).size;
+
+  const growthTrend = Array.from({ length: 6 }, (_, index) => {
+    const start = daysAgo((5 - index) * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    const activeUsers = new Set(
+      activityEvents
+        .filter((event) => event.date >= start && event.date <= end)
+        .map((event) => event.userId)
+    ).size;
+    return { date: dateLabel(start), active_users: activeUsers };
+  });
+
+  const activeOrLoggedInUsers = users.filter((user) => user.is_active || user.last_login).length;
+  const firstTrainingUsers = new Set(progressRows.map((row) => row.user_id));
+  const completedUsers = new Set(progressRows.filter((row) => row.is_completed).map((row) => row.user_id));
+  const weekOneUsers = new Set(
+    progressRows
+      .filter((row) => {
+        const user = userById.get(row.user_id);
+        const createdAt = asDate(user?.created_at);
+        const watchedAt = asDate(row.last_watched_at) ?? asDate(row.updated_at);
+        if (!createdAt || !watchedAt) return false;
+        const sevenDaysAfter = new Date(createdAt);
+        sevenDaysAfter.setDate(createdAt.getDate() + 7);
+        return watchedAt <= sevenDaysAfter;
+      })
+      .map((row) => row.user_id)
+  );
+
+  const dayCounts = new Map(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => [day, 0]));
+  const hourCounts = new Map<string, number>();
+  for (const event of activityEvents) {
+    const day = event.date.toLocaleDateString(undefined, { weekday: 'short' });
+    dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1);
+    const hour = event.date.toLocaleTimeString(undefined, { hour: 'numeric' });
+    hourCounts.set(hour, (hourCounts.get(hour) ?? 0) + 1);
+  }
+
+  const progressCountByUser = new Map<string, number>();
+  for (const row of progressRows) {
+    progressCountByUser.set(row.user_id, (progressCountByUser.get(row.user_id) ?? 0) + 1);
+  }
+
+  const watchedCounts = [...progressCountByUser.values()];
+  const sessionsStarted = progressRows.length;
+  const sessionsCompleted = progressRows.filter((row) => row.is_completed).length;
+  const progressValues = progressRows
+    .map((row) => Number(row.progress_percentage ?? 0))
+    .filter((value) => Number.isFinite(value));
+  const averageCompletionRate = progressValues.length > 0
+    ? Math.round((progressValues.reduce((sum, value) => sum + value, 0) / progressValues.length) * 10) / 10
+    : 0;
+
+  return {
+    activity: {
+      dau,
+      wau: uniqueUsersSince(weekStart),
+      mau: uniqueUsersSince(monthStart),
+      growth_trend: growthTrend,
+    },
+    journey: {
+      registration_to_onboarding: percentOf(activeOrLoggedInUsers, users.length),
+      onboarding_to_first_training: percentOf(firstTrainingUsers.size, activeOrLoggedInUsers),
+      first_training_to_week_one: percentOf(weekOneUsers.size, firstTrainingUsers.size),
+      week_one_to_month_one: percentOf(completedUsers.size, weekOneUsers.size),
+    },
+    engagement: {
+      most_active_days: [...dayCounts.entries()].map(([day, activity]) => ({ day, activity })),
+      most_active_times: [...hourCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6)
+        .map(([hour, activity]) => ({ hour, activity })),
+      session_frequency_patterns: [
+        { bucket: '1 lesson', users: watchedCounts.filter((count) => count === 1).length },
+        { bucket: '2-3 lessons', users: watchedCounts.filter((count) => count >= 2 && count <= 3).length },
+        { bucket: '4+ lessons', users: watchedCounts.filter((count) => count >= 4).length },
+      ],
+    },
+    training: {
+      sessions_started: sessionsStarted,
+      sessions_completed: sessionsCompleted,
+      average_completion_rate: averageCompletionRate,
+      drop_off_rate: percentOf(Math.max(0, sessionsStarted - sessionsCompleted), sessionsStarted),
+    },
+    demo_notes: [
+      `Using ${users.length} users, ${progressRows.length} video progress rows, ${fallRows.length} falls, and ${requestRows.length} access requests from Supabase.`,
+      'Active user counts are based on logins, signups, video progress, falls, and access-request activity.',
+    ],
+  };
+}
+
+async function getDatabaseAnalyticsDashboard(): Promise<AnalyticsDashboard> {
+  const [{ data: users, error: usersError }, { data: progress, error: progressError }, { data: falls, error: fallsError }, { data: requests, error: requestsError }] = await Promise.all([
+    supabase
+      .from('users')
+      .select('user_id, created_at, last_login, is_active, last_survey_submitted_at, active_learning_enabled'),
+    supabase
+      .from('video_progress')
+      .select('user_id, last_watched_at, updated_at, progress_percentage, is_completed'),
+    supabase
+      .from('falls')
+      .select('user_id, timestamp'),
+    supabase
+      .from('active_learning_requests')
+      .select('user_id, status, requested_at, reviewed_at'),
+  ]);
+
+  if (usersError) throw usersError;
+  if (progressError) throw progressError;
+  if (fallsError) throw fallsError;
+  if (requestsError) throw requestsError;
+
+  return buildDatabaseAnalyticsDashboard(
+    (users ?? []) as AnalyticsUserRow[],
+    (progress ?? []) as VideoProgressRow[],
+    (falls ?? []) as FallRow[],
+    (requests ?? []) as AnalyticsAccessRequestRow[],
+  );
+}
+
 export interface BodyLandmark {
   index: number;
   x: number;
@@ -394,7 +611,7 @@ export async function setActiveLearningEnabled(participantId: string, enabled: b
 
 export async function getAnalyticsDashboard(): Promise<AnalyticsDashboard> {
   try {
-    return await request('/analytics/dashboard');
+    return await getDatabaseAnalyticsDashboard();
   } catch {
     return demoAnalyticsDashboard();
   }

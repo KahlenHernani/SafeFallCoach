@@ -1,6 +1,4 @@
 import '../styles/page-home.css';
-import { Link } from 'react-router-dom';
-import { routes } from '../data/routes';
 import { SectionCard } from '../components/SectionCard';
 import { Brain, Camera, CircleCheckBig, ShieldCheck, Users } from 'lucide-react';
 
@@ -12,7 +10,6 @@ export function HomePage() {
           <p className="eyebrow">Research-friendly fall prevention</p>
           <h1>Simple, accessible training for safer movement.</h1>
           <p className="lead">SafeFall Coach helps older adults watch short lessons, practice with a camera, and review gentle AI feedback without payments or clutter.</p>
-          <div className="button-row"><Link to={routes.signup} className="button button-primary">Create account</Link><Link to={routes.login} className="button button-secondary">Sign in</Link></div>
         </div>
         <div className="hero-panel" aria-label="Key benefits">
           <div className="mini-stat"><ShieldCheck /><span>High contrast and large text</span></div>
