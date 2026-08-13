@@ -1,16 +1,22 @@
 import '../styles/page-auth.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { routes } from '../data/routes';
 import { useAuth } from '../context/AuthContext';
 
 export function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Already signed in (e.g. navigated back to /login manually) — bounce to
+  // the dashboard instead of showing the sign-in form again.
+  useEffect(() => {
+    if (user) navigate(routes.dashboard, { replace: true });
+  }, [user, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,8 +28,10 @@ export function LoginPage() {
       setError(error);
       return;
     }
-    navigate(routes.dashboard);
+    navigate(routes.dashboard, { replace: true });
   }
+
+  if (user) return null;
 
   return <div className="auth-shell">
     <form className="card auth-card" onSubmit={handleSubmit}>

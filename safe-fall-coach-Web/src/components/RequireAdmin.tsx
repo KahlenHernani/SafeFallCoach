@@ -4,10 +4,19 @@ import { useAuth } from '../context/AuthContext';
 
 const ADMIN_ROLES = ['admin'];
 
-export function RequireAdmin() {
-  const { role, loading } = useAuth();
+function LoadingScreen() {
+  return (
+    <div className="status-screen">
+      <h1>Loading SafeFall Coach</h1>
+      <p>Checking your account permissions.</p>
+    </div>
+  );
+}
 
-  if (loading) return null;
+export function RequireAdmin() {
+  const { role, loading, roleLoading } = useAuth();
+
+  if (loading || roleLoading) return <LoadingScreen />;
   if (!role || !ADMIN_ROLES.includes(role)) {
     return <Navigate to={routes.dashboard} replace />;
   }

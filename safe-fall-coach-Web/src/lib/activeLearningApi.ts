@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getDailyActiveLearningUsage } from './activeLearningSessionsApi';
 
 const DEFAULT_BASE_URL = import.meta.env.VITE_ACTIVE_LEARNING_API_URL || 'http://127.0.0.1:8000';
 const API_BASE_URL = DEFAULT_BASE_URL.replace(/\/$/, '');
@@ -135,11 +136,28 @@ async function loadActiveLearningAccess(participantId: string): Promise<ActiveLe
   if (requestError) throw requestError;
   if (userError) throw userError;
 
-  return accessFromRows(
+  const base = accessFromRows(
     participantId,
     requestRow as ActiveLearningRequestRow | null,
     userRow as ActiveLearningUserRow | null,
   );
+
+  // Daily usage is computed from active_learning_sessions so it reflects
+  // real practice activity instead of the zeroed-out placeholder above.
+  try {
+    const usage = await getDailyActiveLearningUsage(participantId);
+    const secondsUsed = Math.min(ACTIVE_LEARNING_DAILY_SECONDS_LIMIT, usage.secondsUsed);
+    const sessionsUsed = Math.min(ACTIVE_LEARNING_DAILY_SESSION_LIMIT, usage.sessionsUsed);
+    return {
+      ...base,
+      daily_seconds_used: secondsUsed,
+      daily_seconds_remaining: Math.max(0, ACTIVE_LEARNING_DAILY_SECONDS_LIMIT - secondsUsed),
+      daily_sessions_used: sessionsUsed,
+      daily_sessions_remaining: Math.max(0, ACTIVE_LEARNING_DAILY_SESSION_LIMIT - sessionsUsed),
+    };
+  } catch {
+    return base;
+  }
 }
 
 export interface AnalyticsDashboard {

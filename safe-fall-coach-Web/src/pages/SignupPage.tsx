@@ -1,11 +1,11 @@
 import '../styles/page-auth.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { routes } from '../data/routes';
 import { useAuth } from '../context/AuthContext';
 
 export function SignupPage() {
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -14,6 +14,10 @@ export function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) navigate(routes.dashboard, { replace: true });
+  }, [user, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,8 +31,10 @@ export function SignupPage() {
     }
     // If email confirmation is required, there's no session yet.
     setConfirmMessage('Check your email to confirm your account, then sign in.');
-    setTimeout(() => navigate(routes.login), 1500);
+    setTimeout(() => navigate(routes.login, { replace: true }), 1500);
   }
+
+  if (user) return null;
 
   return <div className="auth-shell">
     <form className="card auth-card" onSubmit={handleSubmit}>

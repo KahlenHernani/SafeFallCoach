@@ -48,3 +48,21 @@
   padding-left: 1.25rem;
   color: var(--muted);
 }
+
+.status-screen {
+  min-height: 60vh;
+  display: grid;
+  place-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.status-screen h1,
+.status-screen p {
+  margin: 0;
+}
+
+.status-screen p {
+  color: var(--muted);
+}

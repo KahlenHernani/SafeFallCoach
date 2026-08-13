@@ -9,6 +9,7 @@ import {
   type BodyLandmarkPayload,
   type StateMessage,
 } from '../lib/activeLearningApi';
+import { recordSessionEnd, recordSessionStart } from '../lib/activeLearningSessionsApi';
 import { useWebcamStream } from '../lib/useWebcamStream';
 import { useAuth } from '../context/AuthContext';
 
@@ -177,6 +178,8 @@ export function PracticePage() {
   const stateSocketRef = useRef<WebSocket | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastFeedbackId = useRef<number>(-1);
+  const activeLearningSessionIdRef = useRef<string | null>(null);
+  const activeLearningSessionStartRef = useRef<number | null>(null);
 
   // Captures the laptop webcam and streams JPEG frames to the backend /ws/ingest.
   const webcam = useWebcamStream({ fps: 24 });
@@ -186,6 +189,13 @@ export function PracticePage() {
     return () => {
       stateSocketRef.current?.close();
       stateSocketRef.current = null;
+      if (activeLearningSessionIdRef.current) {
+        const elapsed = activeLearningSessionStartRef.current
+          ? Math.max(0, Math.round((Date.now() - activeLearningSessionStartRef.current) / 1000))
+          : 0;
+        void recordSessionEnd(activeLearningSessionIdRef.current, elapsed);
+        activeLearningSessionIdRef.current = null;
+      }
     };
   }, []);
 
@@ -246,17 +256,25 @@ export function PracticePage() {
   async function beginActiveLearningSession() {
     if (starting || active) return;
     if (!user) {
-  setShowDisclaimer(false);
-  setStatusMessage('You must be signed in to start Active Learning Mode.');
-  return;
-}
-setShowDisclaimer(false);
-setStarting(true);
-try {
-  setStatusMessage('Requesting camera access…');
-  await webcam.start();
-  setStatusMessage('Starting session…');
-  const session = await startSession(user.id);
+      setShowDisclaimer(false);
+      setStatusMessage('You must be signed in to start Active Learning Mode.');
+      return;
+    }
+    setShowDisclaimer(false);
+    setStarting(true);
+    try {
+      setStatusMessage('Requesting camera access…');
+      await webcam.start();
+      setStatusMessage('Starting session…');
+      const session = await startSession(user.id);
+      try {
+        activeLearningSessionIdRef.current = await recordSessionStart(user.id);
+        activeLearningSessionStartRef.current = Date.now();
+      } catch {
+        // Usage tracking is best-effort — don't block practice if this fails.
+        activeLearningSessionIdRef.current = null;
+        activeLearningSessionStartRef.current = null;
+      }
       openStateSocket();
       setActive(true);
       setFeedback([]);
@@ -278,6 +296,20 @@ try {
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Unable to stop the session.');
     } finally {
+      if (activeLearningSessionIdRef.current) {
+        const durationSeconds = state?.duration_seconds ?? (
+          activeLearningSessionStartRef.current
+            ? Math.max(0, Math.round((Date.now() - activeLearningSessionStartRef.current) / 1000))
+            : 0
+        );
+        try {
+          await recordSessionEnd(activeLearningSessionIdRef.current, durationSeconds);
+        } catch {
+          // Best-effort — the backend session already stopped either way.
+        }
+        activeLearningSessionIdRef.current = null;
+        activeLearningSessionStartRef.current = null;
+      }
       stateSocketRef.current?.close();
       stateSocketRef.current = null;
       webcam.stop();
