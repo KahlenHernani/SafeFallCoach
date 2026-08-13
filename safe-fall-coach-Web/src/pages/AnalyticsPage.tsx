@@ -207,15 +207,6 @@ export function AnalyticsPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Admin review notes">
-            <ol className="demo-script">
-              <li>Start with DAU, WAU, and MAU to monitor real user activity.</li>
-              <li>Use the growth trend to compare recent weekly engagement.</li>
-              <li>Walk through each journey conversion to identify where participants drop out.</li>
-              <li>Use the heatmap to decide when reminders or supervised sessions should be scheduled.</li>
-              <li>Use training completion metrics to identify lessons with high drop-off.</li>
-            </ol>
-          </SectionCard>
         </div>
       </>
     ) : (

@@ -138,13 +138,6 @@
   font-size: 1.25rem;
 }
 
-.demo-script {
-  display: grid;
-  gap: 0.65rem;
-  margin: 0;
-  padding-left: 1.25rem;
-  color: var(--text);
-}
 
 @media (max-width: 900px) {
   .analytics-hero {

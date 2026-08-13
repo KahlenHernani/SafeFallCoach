@@ -200,6 +200,10 @@ export function PracticePage() {
     drawBodyLandmarks(canvas, webcam.videoRef.current, state?.body_landmarks);
   }, [state?.body_landmarks, webcam.state.status, webcam.videoRef]);
 
+  function severityLabel(severity: string) {
+  return severity.toLowerCase() === 'error' ? 'Alert' : severity;
+  }
+
   function openStateSocket() {
     stateSocketRef.current?.close();
     lastFeedbackId.current = -1;
@@ -361,7 +365,7 @@ try {
                 <article className={`feedback-card feedback-card-latest severity-${feedback[0].severity}`}>
                   <div className="feedback-card-header">
                     <span><FeedbackIcon severity={feedback[0].severity} /> Latest analysis</span>
-                    <strong>{feedback[0].severity}</strong>
+                    <strong>{severityLabel(feedback[0].severity)}</strong>
                   </div>
                   <div className="feedback-card-body">
                     {renderFeedbackText(feedback[0].message)}
@@ -371,7 +375,7 @@ try {
                   <article className={`feedback-card severity-${item.severity}`} key={item.id}>
                     <div className="feedback-card-header">
                       <span><FeedbackIcon severity={item.severity} /> Previous feedback</span>
-                      <strong>{item.severity}</strong>
+                      <strong>{severityLabel(item.severity)}</strong>
                     </div>
                     <div className="feedback-card-body">
                       {renderFeedbackText(item.message)}
@@ -405,18 +409,10 @@ try {
             <button
               className="button button-primary"
               type="button"
-              onClick={handleStart}
-              disabled={starting || active}
+              onClick={active ? handleStop : handleStart}
+              disabled={starting}
             >
-              {starting ? 'Starting…' : 'Start session'}
-            </button>
-            <button
-              className="button button-secondary"
-              type="button"
-              onClick={handleStop}
-              disabled={!active}
-            >
-              Stop session
+            {starting ? 'Starting…' : active ? 'Stop Active Learning' : 'Start Active Learning'}
             </button>
           </div>
         </div>
