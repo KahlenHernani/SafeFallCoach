@@ -17,6 +17,10 @@ function formatDate(value: string | null) {
   return new Date(value).toLocaleString();
 }
 
+function displayName(p: MergedParticipant) {
+  return [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || p.email;
+}
+
 export function ParticipantsPanel() {
   const [participants, setParticipants] = useState<MergedParticipant[]>([]);
   const [query, setQuery] = useState('');
@@ -64,10 +68,30 @@ export function ParticipantsPanel() {
     }
   }
 
-  async function handleDecision(p: MergedParticipant, status: 'approved' | 'rejected') {
+  /**
+   * requirePending: true means this action only makes sense against a
+   * genuinely pending request (Approve/Reject). "Revoke AL access" passes
+   * requirePending: false since it deliberately acts on an already-approved
+   * user, not a pending one.
+   */
+  async function handleDecision(
+    p: MergedParticipant,
+    status: 'approved' | 'rejected',
+    options?: { requirePending?: boolean },
+  ) {
+    const requirePending = options?.requirePending ?? true;
+    const currentStatus = p.access?.request_status ?? 'none';
+
+    if (requirePending && currentStatus !== 'pending') {
+      setMessage(
+        `${displayName(p)} has no pending Active Learning request to ${status === 'approved' ? 'approve' : 'reject'}.`,
+      );
+      return;
+    }
+
     try {
       await decideActiveLearningRequest(p.user_id, status);
-      let emailMessage = '';
+      let confirmationMessage = `${displayName(p)} ${status === 'approved' ? 'approved' : 'rejected'}.`;
       if (status === 'approved') {
         const emailResult = await sendAccessGrantedEmail({
           userId: p.user_id,
@@ -75,10 +99,10 @@ export function ParticipantsPanel() {
           firstName: p.first_name,
           lastName: p.last_name,
         });
-        emailMessage = emailResult.message;
+        confirmationMessage = emailResult.message;
       }
       await load();
-      if (emailMessage) setMessage(emailMessage);
+      setMessage(confirmationMessage);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to update access request.');
     }
@@ -163,7 +187,11 @@ export function ParticipantsPanel() {
                             </button>
                           </>
                         ) : (
-                          <button className="button button-secondary" type="button" onClick={() => void handleDecision(p, 'rejected')}>
+                          <button
+                            className="button button-secondary"
+                            type="button"
+                            onClick={() => void handleDecision(p, 'rejected', { requirePending: false })}
+                          >
                             <XCircle size={16} /> Revoke AL access
                           </button>
                         )}

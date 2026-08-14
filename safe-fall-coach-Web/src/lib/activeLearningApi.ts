@@ -184,6 +184,9 @@ export interface AnalyticsDashboard {
     average_completion_rate: number;
     drop_off_rate: number;
   };
+  
+  monthlyProgress: Array<{ month: string; completedLessons: number; practiceSessions: number }>;
+
   demo_notes: string[];
 }
 
@@ -237,6 +240,14 @@ const DEMO_ANALYTICS_DASHBOARD: AnalyticsDashboard = {
     average_completion_rate: 77.8,
     drop_off_rate: 22.2,
   },
+  monthlyProgress: [
+    { month: 'Mar', completedLessons: 18, practiceSessions: 9 },
+    { month: 'Apr', completedLessons: 24, practiceSessions: 14 },
+    { month: 'May', completedLessons: 31, practiceSessions: 19 },
+    { month: 'Jun', completedLessons: 27, practiceSessions: 22 },
+    { month: 'Jul', completedLessons: 35, practiceSessions: 28 },
+    { month: 'Aug', completedLessons: 41, practiceSessions: 33 },
+  ],
   demo_notes: [
     'Frontend demo analytics are shown when the backend analytics service is unavailable.',
     'Training videos play locally and do not require Active Learning access.',
@@ -276,6 +287,11 @@ type AnalyticsAccessRequestRow = {
   reviewed_at: string | null;
 };
 
+type ActiveLearningSessionRow = {
+  user_id: string;
+  started_at: string;
+};
+
 function asDate(value: string | null | undefined) {
   if (!value) return null;
   const date = new Date(value);
@@ -300,11 +316,44 @@ function dateLabel(date: Date) {
   return date.toLocaleDateString(undefined, { month: 'short', day: '2-digit' });
 }
 
+function monthLabel(date: Date) {
+  return date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+}
+
+function buildMonthlyProgress(
+  progressRows: VideoProgressRow[],
+  sessionRows: ActiveLearningSessionRow[],
+): AnalyticsDashboard['monthlyProgress'] {
+  const now = new Date();
+  const months = Array.from({ length: 6 }, (_, index) => {
+    const offset = 5 - index;
+    const start = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() - offset + 1, 1);
+    return { label: monthLabel(start), start, end };
+  });
+
+  return months.map(({ label, start, end }) => {
+    const completedLessons = progressRows.filter((row) => {
+      if (!row.is_completed) return false;
+      const when = asDate(row.last_watched_at) ?? asDate(row.updated_at);
+      return when !== null && when >= start && when < end;
+    }).length;
+
+    const practiceSessions = sessionRows.filter((row) => {
+      const when = asDate(row.started_at);
+      return when !== null && when >= start && when < end;
+    }).length;
+
+    return { month: label, completedLessons, practiceSessions };
+  });
+}
+
 function buildDatabaseAnalyticsDashboard(
   users: AnalyticsUserRow[],
   progressRows: VideoProgressRow[],
   fallRows: FallRow[],
   requestRows: AnalyticsAccessRequestRow[],
+  sessionRows: ActiveLearningSessionRow[],
 ): AnalyticsDashboard {
   const now = new Date();
   const today = dayKey(now);
@@ -428,6 +477,7 @@ function buildDatabaseAnalyticsDashboard(
       average_completion_rate: averageCompletionRate,
       drop_off_rate: percentOf(Math.max(0, sessionsStarted - sessionsCompleted), sessionsStarted),
     },
+    monthlyProgress: buildMonthlyProgress(progressRows, sessionRows),
     demo_notes: [
       `Using ${users.length} users, ${progressRows.length} video progress rows, ${fallRows.length} falls, and ${requestRows.length} access requests from Supabase.`,
       'Active user counts are based on logins, signups, video progress, falls, and access-request activity.',
@@ -436,7 +486,13 @@ function buildDatabaseAnalyticsDashboard(
 }
 
 async function getDatabaseAnalyticsDashboard(): Promise<AnalyticsDashboard> {
-  const [{ data: users, error: usersError }, { data: progress, error: progressError }, { data: falls, error: fallsError }, { data: requests, error: requestsError }] = await Promise.all([
+  const [
+    { data: users, error: usersError },
+    { data: progress, error: progressError },
+    { data: falls, error: fallsError },
+    { data: requests, error: requestsError },
+    { data: sessions, error: sessionsError },
+  ] = await Promise.all([
     supabase
       .from('users')
       .select('user_id, created_at, last_login, is_active, last_survey_submitted_at, active_learning_enabled'),
@@ -449,18 +505,23 @@ async function getDatabaseAnalyticsDashboard(): Promise<AnalyticsDashboard> {
     supabase
       .from('active_learning_requests')
       .select('user_id, status, requested_at, reviewed_at'),
+    supabase
+      .from('active_learning_sessions')
+      .select('user_id, started_at'),
   ]);
 
   if (usersError) throw usersError;
   if (progressError) throw progressError;
   if (fallsError) throw fallsError;
   if (requestsError) throw requestsError;
+  if (sessionsError) throw sessionsError;
 
   return buildDatabaseAnalyticsDashboard(
     (users ?? []) as AnalyticsUserRow[],
     (progress ?? []) as VideoProgressRow[],
     (falls ?? []) as FallRow[],
     (requests ?? []) as AnalyticsAccessRequestRow[],
+    (sessions ?? []) as ActiveLearningSessionRow[],
   );
 }
 

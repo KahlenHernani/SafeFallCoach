@@ -7,6 +7,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -118,7 +119,21 @@ export function AnalyticsPage() {
               </ResponsiveContainer>
             </div>
           </SectionCard>
-
+          <SectionCard title="Monthly progress">
+            <div className="chart-frame">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={analytics.monthlyProgress}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} width={32} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="completedLessons" name="Lessons completed" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="practiceSessions" name="Practice sessions" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </SectionCard>
           <SectionCard title="User journey analytics">
             <div className="journey-list">
               {journeyData.map((item) => (
