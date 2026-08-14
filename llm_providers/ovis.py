@@ -230,9 +230,9 @@ class OvisProvider(LLMProvider):
                     inputs = input_ids,
                     pixel_values = pixel_values,
                     grid_thws = grid_thws,
-                    max_new_tokens = 700,
-                    do_sample = True,
-                    temperature = 0.7,
+                    max_new_tokens = 180,
+                    do_sample = False,
+                    temperature = 0.2,
                     eos_token_id = self._model.text_tokenizer.eos_token_id,
                     pad_token_id = self._model.text_tokenizer.pad_token_id,
                 )
@@ -371,6 +371,22 @@ class OvisProvider(LLMProvider):
                 f"before and after the fall. {action_context}"
             )
 
+            return f"""You are a fall prevention coach for the SafeFall Coach app.
+
+        {context}
+
+        Analyze the images carefully and give concise coaching for a live practice screen.
+        Respond with exactly this format:
+
+        Technique score: <number from 0 to 100 based on how well they executed the fall technique>
+        What you did well: <one short sentence with the best observed technique detail>
+        What to improve: <one short sentence with the most important correction and why it matters>
+        Next rep: <one short concrete cue they can try immediately>
+
+        Keep the total response under 70 words. Do not include extra sections,
+        markdown, bullets, recovery instructions, environmental commentary, or disclaimers.
+        Be encouraging, specific to what you see in the images, and use plain text only."""
+
             return f"""You are a fall prevention coach for the SafeFall Coach app, coaching an older adult practicing safe falling.
 
         {context}
@@ -408,6 +424,17 @@ class OvisProvider(LLMProvider):
             context = f"A fall was just detected during practice. {action_context}"
         else:
             context = "The user is practicing fall techniques."
+
+        return f"""You are a fall prevention coach for the SafeFall Coach app.
+        {context}
+
+        Give concise live coaching in exactly three short sentences:
+        1. What they did well.
+        2. The most important technique correction and why it matters.
+        3. One cue to try on the next rep.
+
+        Keep the total response under 70 words. No markdown, bullets, recovery
+        instructions, environmental commentary, or disclaimers. Plain text only."""
 
         return f"""You are a fall prevention coach for the SafeFall Coach app.
         {context}

@@ -13,6 +13,7 @@ import { TrainingPage } from './pages/TrainingPage';
 import { PracticePage } from './pages/PracticePage';
 import { AccessibilityPage } from './pages/AccessibilityPage';
 import { AdminPage } from './pages/admin/AdminPage';
+import { FeedbackHistoryPage } from './pages/FeedbackHistoryPage';
 import { useAuth } from './context/AuthContext';
 
 /**
@@ -21,6 +22,7 @@ import { useAuth } from './context/AuthContext';
  */
 function HomeRoute() {
   const { user, loading } = useAuth();
+
   if (loading) {
     return (
       <div className="status-screen">
@@ -29,7 +31,11 @@ function HomeRoute() {
       </div>
     );
   }
-  if (user) return <Navigate to={routes.dashboard} replace />;
+
+  if (user) {
+    return <Navigate to={routes.dashboard} replace />;
+  }
+
   return <HomePage />;
 }
 
@@ -47,10 +53,20 @@ export default function App() {
         {/* Everything else requires sign-in */}
         <Route element={<RequireAuth />}>
           <Route path={routes.dashboard} element={<DashboardPage />} />
-          <Route path={routes.activeLearningAccess} element={<ActiveLearningAccessPage />} />
+          <Route
+            path={routes.activeLearningAccess}
+            element={<ActiveLearningAccessPage />}
+          />
           <Route path={routes.training} element={<TrainingPage />} />
           <Route path={routes.practice} element={<PracticePage />} />
-          <Route path={routes.accessibility} element={<AccessibilityPage />} />
+          <Route
+            path={routes.feedbackHistory}
+            element={<FeedbackHistoryPage />}
+          />
+          <Route
+            path={routes.accessibility}
+            element={<AccessibilityPage />}
+          />
 
           {/* Analytics — admins only */}
           <Route element={<RequireAdmin />}>

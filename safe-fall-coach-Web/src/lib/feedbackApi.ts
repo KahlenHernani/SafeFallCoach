@@ -1,0 +1,39 @@
+import { supabase } from './supabaseClient';
+
+export interface FeedbackHistoryItem {
+  id: string;
+  session_id: string | null;
+  user_id: string;
+  message: string;
+  severity: string | null;
+  pose_score: number | null;
+  created_at: string;
+}
+
+export async function recordSessionFeedback(input: {
+  userId: string;
+  sessionId: string | null;
+  message: string;
+  severity: string;
+  poseScore: number | null;
+}): Promise<void> {
+  const { error } = await supabase.from('session_feedback').insert({
+    user_id: input.userId,
+    session_id: input.sessionId,
+    message: input.message,
+    severity: input.severity,
+    pose_score: input.poseScore,
+  });
+  if (error) throw error;
+}
+
+export async function listFeedbackHistory(userId: string, limit = 100): Promise<FeedbackHistoryItem[]> {
+  const { data, error } = await supabase
+    .from('session_feedback')
+    .select('id, session_id, user_id, message, severity, pose_score, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as FeedbackHistoryItem[];
+}

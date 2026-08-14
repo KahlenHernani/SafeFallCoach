@@ -9,6 +9,7 @@ export const routes = {
   practice: '/practice',
   admin: '/admin',
   accessibility: '/accessibility',
+  feedbackHistory: '/feedback-history', // new
 } as const;
 
 

@@ -2,6 +2,7 @@ import '../styles/page-practice.css';
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, MessageCircle } from 'lucide-react';
 import { SectionCard } from '../components/SectionCard';
+import { recordSessionFeedback } from '../lib/feedbackApi';
 import {
   createStateSocket,
   startSession,
@@ -240,6 +241,18 @@ export function PracticePage() {
         setFeedback((prev) =>
           [{ id: msg.feedback_id as number, message: msg.latest_feedback as string, severity: msg.severity || 'info' }, ...prev].slice(0, 20),
         );
+
+        if (user) {
+          void recordSessionFeedback({
+            userId: user.id,
+            sessionId: activeLearningSessionIdRef.current,
+            message: msg.latest_feedback as string,
+            severity: msg.severity || 'info',
+            poseScore: typeof msg.pose_score === 'number' ? msg.pose_score : null,
+          }).catch(() => {
+            // Best-effort — don't block the live session UI on a write failure.
+          });
+        }
       }
     };
 

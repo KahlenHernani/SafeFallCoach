@@ -595,7 +595,7 @@ class ActiveLearningWizard:
             feedback_msg, severity=severity,
             pose_score=score or 0,
         )
-        return f"FALL DETECTED! {feedback_msg}"
+        return feedback_msg
 
     def _cancel_pending_llm(self, wait: bool = False):
         """Cancel any pending LLM future.

@@ -6,6 +6,7 @@ Uses Ovis2.5-2B for local GPU inference (requires NVIDIA GPU with CUDA).
 """
 
 import os
+import re
 import time
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
@@ -245,8 +246,13 @@ class FeedbackGenerator:
             
             if llm_result:
                 score = llm_result.pose_score if llm_result.pose_score is not None else technique_score
+                message = self._normalize_fall_feedback_message(
+                    llm_result.message,
+                    score,
+                    pose_angles,
+                )
                 return CoachingFeedback(
-                    message = llm_result.message,
+                    message = message,
                     severity = llm_result.severity,
                     pose_score = score,
                     category = "fall_technique",
@@ -301,53 +307,19 @@ class FeedbackGenerator:
 
         # Build supportive user-facing fallback message. Keep Ovis diagnostics in logs only.
         score = technique_score or 0
-        if score >= 80:
-            prefix = "Excellent effort - that was a strong practice fall."
-        elif score >= 60:
-            prefix = "Good attempt - you are building the right habits."
-        else:
-            prefix = "Keep practicing - this is exactly the kind of rep that helps you improve."
-
-        action_text = f" Detected action: {fall_action}." if fall_action else ""
-        likely_causes = []
-        if left_elbow > 160 or right_elbow > 160:
-            likely_causes.append(
-                "reaching with straighter arms may have pulled your weight forward and made the landing harder to control"
-            )
-        if left_knee >= 160 or right_knee >= 160:
-            likely_causes.append(
-                "not bending the knees enough likely kept your center of gravity higher than ideal"
-            )
-        if torso_tilt >= 15:
-            likely_causes.append(
-                "torso tilt may have shifted your center of gravity away from a smooth, controlled descent"
-            )
-        cause_text = (
-            "What might have caused the fall: " + "; ".join(likely_causes) + "."
-            if likely_causes
-            else "What might have caused the fall: The movement looked mostly controlled, so the main focus is repeating the same pattern slowly and consistently."
-        )
-
-        parts = [f"Summary: {prefix}{action_text}", cause_text]
-
         if positives:
-            parts.append(
-                "What you did well: " +
-                " ".join(f"{item.capitalize()}." for item in positives)
-            )
+            positive_text = f"What you did well: {positives[0].capitalize()}."
         else:
-            parts.append(
-                "What you did well: You completed a practice fall and stayed in the camera view long enough for the coach to evaluate the movement."
-            )
+            positive_text = "What you did well: You completed the rep and stayed in view for analysis."
 
         if improvements:
-            parts.append("What to improve: " + " ".join(improvements))
+            improvement_text = f"What to improve: {self._first_sentence(improvements[0])}"
         else:
-            parts.append(
-                "What to improve: Keep repeating the same controlled movement slowly, with attention to chin tuck, bent arms, bent knees, and a soft landing path."
-            )
+            improvement_text = "What to improve: Keep the movement slow and controlled with chin tucked, arms bent, and knees soft."
 
-        message = " ".join(parts)
+        cue = self._get_fall_suggestion(score, pose_angles) or "Repeat the same movement slowly."
+        message = f"{positive_text}\n\n{improvement_text}\n\nNext rep: {cue}."
+        message = self._normalize_fall_feedback_message(message, score, pose_angles)
 
         # Determine severity
         if score >= 80:
@@ -492,6 +464,80 @@ class FeedbackGenerator:
                 print(f"[Feedback] LLM error: {error_str}")
 
         return None
+
+    def _normalize_fall_feedback_message(
+        self,
+        message: str,
+        technique_score: int,
+        pose_angles: Dict[str, float],
+    ) -> str:
+        """Return one concise feedback message for both admin and user views."""
+        text = self._strip_feedback_noise(message)
+        sections = self._extract_feedback_sections(text)
+        if sections:
+            normalized = "\n\n".join(sections)
+        else:
+            normalized = self._limit_sentences(text, max_sentences=3)
+
+        normalized = normalized.strip()
+        if not normalized:
+            cue = self._get_fall_suggestion(technique_score, pose_angles) or "Practice the movement slowly"
+            normalized = (
+                "What you did well: You completed the practice rep.\n\n"
+                f"What to improve: {cue}.\n\n"
+                "Next rep: Move slowly and keep control through the landing."
+            )
+
+        words = normalized.split()
+        if len(words) > 85:
+            normalized = " ".join(words[:85]).rstrip(" ,;:") + "."
+        return normalized
+
+    def _strip_feedback_noise(self, message: str) -> str:
+        text = re.sub(r'\r\n?', '\n', message or '')
+        text = re.sub(r'(?im)^\s*technique\s+score\s*:?\s*\d{1,3}(?:\s*/\s*100)?\s*$', '', text)
+        text = re.sub(r'(?im)^\s*(summary|environment\s*&\s*safety|recovery\s+tip)\s*:.*$', '', text)
+        text = re.sub(r'(?im)^\s*[-*]\s*', '', text)
+        text = re.sub(r'[ \t]+', ' ', text)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        return text.strip()
+
+    def _extract_feedback_sections(self, text: str) -> List[str]:
+        labels = [
+            ("What you did well", r'what you did well'),
+            ("What to improve", r'what to improve'),
+            ("Next rep", r'(?:next rep|how to do it better next time)'),
+        ]
+        sections = []
+        for label, pattern in labels:
+            match = re.search(
+                rf'(?is)\b{pattern}\s*:\s*(.*?)(?=\n?\s*(?:what you did well|what to improve|next rep|how to do it better next time|recovery tip|environment\s*&\s*safety)\s*:|$)',
+                text,
+            )
+            if not match:
+                continue
+            value = self._first_sentence(match.group(1).strip())
+            if value:
+                sections.append(f"{label}: {value}")
+        return sections
+
+    @staticmethod
+    def _first_sentence(text: str) -> str:
+        cleaned = re.sub(r'\s+', ' ', text or '').strip()
+        if not cleaned:
+            return ""
+        parts = re.split(r'(?<=[.!?])\s+', cleaned, maxsplit=1)
+        sentence = parts[0].strip()
+        if sentence and sentence[-1] not in ".!?":
+            sentence += "."
+        return sentence
+
+    def _limit_sentences(self, text: str, max_sentences: int) -> str:
+        cleaned = re.sub(r'\s+', ' ', text or '').strip()
+        if not cleaned:
+            return ""
+        sentences = re.split(r'(?<=[.!?])\s+', cleaned)
+        return " ".join(sentence for sentence in sentences[:max_sentences] if sentence).strip()
 
     def _get_fall_suggestion(self, technique_score: int, pose_angles: Dict[str, float]) -> Optional[str]:
         """
