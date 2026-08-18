@@ -14,6 +14,7 @@ import { PracticePage } from './pages/PracticePage';
 import { AccessibilityPage } from './pages/AccessibilityPage';
 import { AdminPage } from './pages/admin/AdminPage';
 import { FeedbackHistoryPage } from './pages/FeedbackHistoryPage';
+import { ConnectPage } from './pages/ConnectPage';
 import { useAuth } from './context/AuthContext';
 
 /**
@@ -53,6 +54,7 @@ export default function App() {
         {/* Everything else requires sign-in */}
         <Route element={<RequireAuth />}>
           <Route path={routes.dashboard} element={<DashboardPage />} />
+          <Route path={routes.connect} element={<ConnectPage />} />
           <Route
             path={routes.activeLearningAccess}
             element={<ActiveLearningAccessPage />}

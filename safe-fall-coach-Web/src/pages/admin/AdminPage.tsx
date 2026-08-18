@@ -1,16 +1,18 @@
 import '../../styles/page-admin.css';
 import { useState } from 'react';
-import { Users, Video, Bell } from 'lucide-react';
+import { Users, Video, Bell, QrCode } from 'lucide-react';
 import { ParticipantsPanel } from './ParticipantsPanel';
 import { ContentPanel } from './ContentPanel';
 import { NotificationsPanel } from './NotificationsPanel';
+import { ActiveLearningLivePanel } from './ActiveLearningLivePanel';
 
-type Tab = 'participants' | 'content' | 'notifications';
+type Tab = 'participants' | 'content' | 'notifications' | 'liveSession';
 
 const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
   { id: 'participants', label: 'Participants', icon: Users },
   { id: 'content', label: 'Content', icon: Video },
   { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'liveSession', label: 'Active Learning', icon: QrCode },
 ];
 
 export function AdminPage() {
@@ -42,6 +44,7 @@ export function AdminPage() {
       {tab === 'participants' && <ParticipantsPanel />}
       {tab === 'content' && <ContentPanel />}
       {tab === 'notifications' && <NotificationsPanel />}
+      {tab === 'liveSession' && <ActiveLearningLivePanel />}
     </div>
   );
 }

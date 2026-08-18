@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 export interface FeedbackHistoryItem {
   id: string;
   session_id: string | null;
+  qr_session_link_id: string | null;
   user_id: string;
   message: string;
   severity: string | null;
@@ -13,6 +14,7 @@ export interface FeedbackHistoryItem {
 export async function recordSessionFeedback(input: {
   userId: string;
   sessionId: string | null;
+  qrSessionLinkId?: string | null;
   message: string;
   severity: string;
   poseScore: number | null;
@@ -20,6 +22,7 @@ export async function recordSessionFeedback(input: {
   const { error } = await supabase.from('session_feedback').insert({
     user_id: input.userId,
     session_id: input.sessionId,
+    qr_session_link_id: input.qrSessionLinkId ?? null,
     message: input.message,
     severity: input.severity,
     pose_score: input.poseScore,
@@ -36,4 +39,27 @@ export async function listFeedbackHistory(userId: string, limit = 100): Promise<
     .limit(limit);
   if (error) throw error;
   return (data ?? []) as FeedbackHistoryItem[];
+}
+
+export function subscribeToFeedbackForLink(
+  qrSessionLinkId: string,
+  onInsert: (item: FeedbackHistoryItem) => void,
+): () => void {
+  const channel = supabase
+    .channel(`feedback-link-${qrSessionLinkId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'session_feedback',
+        filter: `qr_session_link_id=eq.${qrSessionLinkId}`,
+      },
+      (payload) => onInsert(payload.new as FeedbackHistoryItem),
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 }

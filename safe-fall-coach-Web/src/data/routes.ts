@@ -9,7 +9,8 @@ export const routes = {
   practice: '/practice',
   admin: '/admin',
   accessibility: '/accessibility',
-  feedbackHistory: '/feedback-history', // new
+  feedbackHistory: '/feedback-history',
+  connect: '/connect/:code',
 } as const;
 
 

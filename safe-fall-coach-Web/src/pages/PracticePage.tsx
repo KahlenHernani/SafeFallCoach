@@ -181,6 +181,11 @@ export function PracticePage() {
   const lastFeedbackId = useRef<number>(-1);
   const activeLearningSessionIdRef = useRef<string | null>(null);
   const activeLearningSessionStartRef = useRef<number | null>(null);
+  const qrSessionLinkIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    qrSessionLinkIdRef.current = sessionStorage.getItem('safefall.qrSessionLinkId');
+  }, []);
 
   // Captures the laptop webcam and streams JPEG frames to the backend /ws/ingest.
   const webcam = useWebcamStream({ fps: 24 });
@@ -246,6 +251,7 @@ export function PracticePage() {
           void recordSessionFeedback({
             userId: user.id,
             sessionId: activeLearningSessionIdRef.current,
+            qrSessionLinkId: qrSessionLinkIdRef.current,
             message: msg.latest_feedback as string,
             severity: msg.severity || 'info',
             poseScore: typeof msg.pose_score === 'number' ? msg.pose_score : null,
