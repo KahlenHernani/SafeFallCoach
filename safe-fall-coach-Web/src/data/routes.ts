@@ -2,6 +2,8 @@ export const routes = {
   home: '/',
   login: '/login',
   signup: '/signup',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
   dashboard: '/dashboard',
   analytics: '/analytics',
   activeLearningAccess: '/active-learning-access',
@@ -12,5 +14,3 @@ export const routes = {
   feedbackHistory: '/feedback-history',
   connect: '/connect/:code',
 } as const;
-
-

@@ -12,8 +12,6 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Already signed in (e.g. navigated back to /login manually) — bounce to
-  // the dashboard instead of showing the sign-in form again.
   useEffect(() => {
     if (user) navigate(routes.dashboard, { replace: true });
   }, [user, navigate]);
@@ -56,11 +54,16 @@ export function LoginPage() {
           required
         />
       </label>
+      <div className="auth-row-end">
+        <Link className="auth-link" to={routes.forgotPassword}>Forgot your password?</Link>
+      </div>
       {error ? <p className="helper-text" style={{ color: '#dc2626' }}>{error}</p> : null}
       <button className="button button-primary" type="submit" disabled={submitting}>
         {submitting ? 'Signing in…' : 'Sign in'}
       </button>
-      <p className="helper-text">New here? <Link to={routes.signup}>Create an account</Link></p>
+      <p className="helper-text">
+        New here? <Link className="auth-link" to={routes.signup}>Create an account</Link>
+      </p>
     </form>
   </div>;
 }

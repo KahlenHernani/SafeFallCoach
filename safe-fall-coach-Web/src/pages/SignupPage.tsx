@@ -62,7 +62,7 @@ export function SignupPage() {
       <button className="button button-primary" type="submit" disabled={submitting}>
         {submitting ? 'Creating account…' : 'Create account'}
       </button>
-      <p className="helper-text">Already have an account? <Link to={routes.login}>Sign in</Link></p>
+            <p className="helper-text">Already have an account? <Link className="auth-link" to={routes.login}>Sign in</Link></p>
     </form>
   </div>;
 }

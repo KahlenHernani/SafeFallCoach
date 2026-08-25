@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
+import { routes } from '../data/routes';
 
 type AuthContextValue = {
   session: Session | null;
@@ -16,6 +17,8 @@ type AuthContextValue = {
     lastName: string,
   ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -84,6 +87,33 @@ useEffect(() => {
     setRole(null);
   }
 
+  async function resetPasswordForEmail(email: string) {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}${routes.resetPassword}`,
+      });
+      if (error) {
+        console.error('resetPasswordForEmail failed:', error.status, error.message);
+        if (error.status === 500) {
+          return {
+            error:
+              'We could not send the reset email right now. This usually means email sending is not configured for this app yet — please contact your administrator.',
+          };
+        }
+        return { error: error.message };
+      }
+      return { error: null };
+    } catch (err) {
+      console.error('resetPasswordForEmail threw:', err);
+      return { error: 'Something went wrong while requesting a password reset. Please try again shortly.' };
+    }
+  }
+
+  async function updatePassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return { error: error?.message ?? null };
+  }
+
   const value: AuthContextValue = {
     session,
     user: session?.user ?? null,
@@ -93,6 +123,8 @@ useEffect(() => {
     signIn,
     signUp,
     signOut,
+    resetPasswordForEmail,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

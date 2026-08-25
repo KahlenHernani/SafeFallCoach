@@ -6,6 +6,8 @@ import { routes } from './data/routes';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { ActiveLearningAccessPage } from './pages/ActiveLearningAccessPage';
@@ -17,10 +19,6 @@ import { FeedbackHistoryPage } from './pages/FeedbackHistoryPage';
 import { ConnectPage } from './pages/ConnectPage';
 import { useAuth } from './context/AuthContext';
 
-/**
- * '/' is the public landing page. Signed-out visitors see HomePage;
- * signed-in users are bounced straight to the Dashboard.
- */
 function HomeRoute() {
   const { user, loading } = useAuth();
 
@@ -46,12 +44,12 @@ export default function App() {
       {/* Public — no AppShell nav, no auth required */}
       <Route path={routes.login} element={<LoginPage />} />
       <Route path={routes.signup} element={<SignupPage />} />
+      <Route path={routes.forgotPassword} element={<ForgotPasswordPage />} />
+      <Route path={routes.resetPassword} element={<ResetPasswordPage />} />
 
       <Route element={<AppShell />}>
-        {/* Public — HomeRoute decides landing page vs. redirect */}
         <Route path={routes.home} element={<HomeRoute />} />
 
-        {/* Everything else requires sign-in */}
         <Route element={<RequireAuth />}>
           <Route path={routes.dashboard} element={<DashboardPage />} />
           <Route path={routes.connect} element={<ConnectPage />} />
@@ -70,14 +68,12 @@ export default function App() {
             element={<AccessibilityPage />}
           />
 
-          {/* Analytics — admins only */}
           <Route element={<RequireAdmin />}>
             <Route path={routes.analytics} element={<AnalyticsPage />} />
             <Route path={routes.admin} element={<AdminPage />} />
           </Route>
         </Route>
 
-        {/* Unknown paths fall back to Home, which handles the redirect */}
         <Route path="*" element={<Navigate to={routes.home} replace />} />
       </Route>
     </Routes>

@@ -18,7 +18,11 @@ const pageLabels: Record<string, string> = {
 export function AppShell() {
   const location = useLocation();
   const { settings } = useAccessibility();
-  const hideNav = location.pathname === routes.login || location.pathname === routes.signup;
+  const hideNav =
+  location.pathname === routes.login ||
+  location.pathname === routes.signup ||
+  location.pathname === routes.forgotPassword ||
+  location.pathname === routes.resetPassword;
 
   // Audio guidance: announce each page when enabled.
   useEffect(() => {
