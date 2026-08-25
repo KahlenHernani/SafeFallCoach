@@ -23,7 +23,8 @@ export function ConnectPage() {
         sessionStorage.setItem('safefall.qrSessionLinkId', link.id);
         setStatus('connected');
         setMessage('Connected! Starting your practice session...');
-        setTimeout(() => navigate(routes.practice, { replace: true }), 900);
+        const practiceUrl = `${routes.practice}?qrSessionLinkId=${encodeURIComponent(link.id)}`;
+        setTimeout(() => navigate(practiceUrl, { replace: true }), 900);
       } catch (error) {
         if (cancelled) return;
         setStatus('error');

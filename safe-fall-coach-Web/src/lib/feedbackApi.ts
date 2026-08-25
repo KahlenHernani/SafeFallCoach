@@ -33,8 +33,19 @@ export async function recordSessionFeedback(input: {
 export async function listFeedbackHistory(userId: string, limit = 100): Promise<FeedbackHistoryItem[]> {
   const { data, error } = await supabase
     .from('session_feedback')
-    .select('id, session_id, user_id, message, severity, pose_score, created_at')
+    .select('id, session_id, qr_session_link_id, user_id, message, severity, pose_score, created_at')
     .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as FeedbackHistoryItem[];
+}
+
+export async function listFeedbackForLink(qrSessionLinkId: string, limit = 50): Promise<FeedbackHistoryItem[]> {
+  const { data, error } = await supabase
+    .from('session_feedback')
+    .select('id, session_id, qr_session_link_id, user_id, message, severity, pose_score, created_at')
+    .eq('qr_session_link_id', qrSessionLinkId)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;

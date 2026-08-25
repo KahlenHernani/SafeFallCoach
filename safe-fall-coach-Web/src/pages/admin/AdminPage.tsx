@@ -1,5 +1,5 @@
 import '../../styles/page-admin.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Users, Video, Bell, QrCode } from 'lucide-react';
 import { ParticipantsPanel } from './ParticipantsPanel';
 import { ContentPanel } from './ContentPanel';
@@ -15,8 +15,32 @@ const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
   { id: 'liveSession', label: 'Active Learning', icon: QrCode },
 ];
 
+const ADMIN_TAB_STORAGE_KEY = 'safeFallCoach.admin.selectedTab';
+const DEFAULT_TAB: Tab = 'participants';
+
+function isTab(value: string | null): value is Tab {
+  return TABS.some((tab) => tab.id === value);
+}
+
+function getStoredTab(): Tab {
+  try {
+    const storedTab = window.sessionStorage.getItem(ADMIN_TAB_STORAGE_KEY);
+    return isTab(storedTab) ? storedTab : DEFAULT_TAB;
+  } catch {
+    return DEFAULT_TAB;
+  }
+}
+
 export function AdminPage() {
-  const [tab, setTab] = useState<Tab>('participants');
+  const [tab, setTab] = useState<Tab>(getStoredTab);
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(ADMIN_TAB_STORAGE_KEY, tab);
+    } catch {
+      // Ignore storage failures; tab state still works for the active mount.
+    }
+  }, [tab]);
 
   return (
     <div className="page-stack">

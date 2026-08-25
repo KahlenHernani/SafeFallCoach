@@ -37,6 +37,16 @@ export async function createQrSessionLink(adminId: string): Promise<QrSessionLin
   throw new Error('Unable to generate a unique QR code. Please try again.');
 }
 
+export async function getQrSessionLink(id: string): Promise<QrSessionLink | null> {
+  const { data, error } = await supabase
+    .from('qr_session_links')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data as QrSessionLink | null;
+}
+
 export async function endQrSessionLink(id: string): Promise<void> {
   const { error } = await supabase
     .from('qr_session_links')

@@ -1,5 +1,6 @@
 import '../styles/page-practice.css';
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, MessageCircle } from 'lucide-react';
 import { SectionCard } from '../components/SectionCard';
 import { recordSessionFeedback } from '../lib/feedbackApi';
@@ -168,6 +169,7 @@ function FeedbackIcon({ severity }: { severity: string }) {
 }
 
 export function PracticePage() {
+  const [searchParams] = useSearchParams();
   const [active, setActive] = useState(false);
   const [starting, setStarting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -184,8 +186,12 @@ export function PracticePage() {
   const qrSessionLinkIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    qrSessionLinkIdRef.current = sessionStorage.getItem('safefall.qrSessionLinkId');
-  }, []);
+    const qrSessionLinkId = searchParams.get('qrSessionLinkId') ?? sessionStorage.getItem('safefall.qrSessionLinkId');
+    qrSessionLinkIdRef.current = qrSessionLinkId;
+    if (qrSessionLinkId) {
+      sessionStorage.setItem('safefall.qrSessionLinkId', qrSessionLinkId);
+    }
+  }, [searchParams]);
 
   // Captures the laptop webcam and streams JPEG frames to the backend /ws/ingest.
   const webcam = useWebcamStream({ fps: 24 });
