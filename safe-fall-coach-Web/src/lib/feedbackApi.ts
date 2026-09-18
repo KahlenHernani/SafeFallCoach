@@ -5,6 +5,7 @@ export interface FeedbackHistoryItem {
   session_id: string | null;
   qr_session_link_id: string | null;
   user_id: string;
+  user_email: string | null;
   message: string;
   severity: string | null;
   pose_score: number | null;
@@ -13,6 +14,7 @@ export interface FeedbackHistoryItem {
 
 export async function recordSessionFeedback(input: {
   userId: string;
+  userEmail?: string | null;
   sessionId: string | null;
   qrSessionLinkId?: string | null;
   message: string;
@@ -21,6 +23,7 @@ export async function recordSessionFeedback(input: {
 }): Promise<void> {
   const { error } = await supabase.from('session_feedback').insert({
     user_id: input.userId,
+    user_email: input.userEmail ?? null,
     session_id: input.sessionId,
     qr_session_link_id: input.qrSessionLinkId ?? null,
     message: input.message,
@@ -33,7 +36,7 @@ export async function recordSessionFeedback(input: {
 export async function listFeedbackHistory(userId: string, limit = 100): Promise<FeedbackHistoryItem[]> {
   const { data, error } = await supabase
     .from('session_feedback')
-    .select('id, session_id, qr_session_link_id, user_id, message, severity, pose_score, created_at')
+    .select('id, session_id, qr_session_link_id, user_id, user_email, message, severity, pose_score, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -44,7 +47,7 @@ export async function listFeedbackHistory(userId: string, limit = 100): Promise<
 export async function listFeedbackForLink(qrSessionLinkId: string, limit = 50): Promise<FeedbackHistoryItem[]> {
   const { data, error } = await supabase
     .from('session_feedback')
-    .select('id, session_id, qr_session_link_id, user_id, message, severity, pose_score, created_at')
+    .select('id, session_id, qr_session_link_id, user_id, user_email, message, severity, pose_score, created_at')
     .eq('qr_session_link_id', qrSessionLinkId)
     .order('created_at', { ascending: false })
     .limit(limit);

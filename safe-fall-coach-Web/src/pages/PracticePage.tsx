@@ -256,13 +256,14 @@ export function PracticePage() {
         if (user) {
           void recordSessionFeedback({
             userId: user.id,
+            userEmail: user.email ?? null,
             sessionId: activeLearningSessionIdRef.current,
             qrSessionLinkId: qrSessionLinkIdRef.current,
             message: msg.latest_feedback as string,
             severity: msg.severity || 'info',
             poseScore: typeof msg.pose_score === 'number' ? msg.pose_score : null,
-          }).catch(() => {
-            // Best-effort — don't block the live session UI on a write failure.
+          }).catch((error) => {
+            console.error('Failed to save session feedback:', error);
           });
         }
       }
