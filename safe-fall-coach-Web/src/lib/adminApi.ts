@@ -163,3 +163,19 @@ export async function setNotificationTemplateEnabled(id: string, enabled: boolea
   const { error } = await supabase.from('notification_templates').update({ enabled }).eq('id', id);
   if (error) throw error;
 }
+
+export interface GuestLookup {
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  is_active: boolean;
+}
+
+export async function findParticipantByEmail(email: string): Promise<GuestLookup | null> {
+  const { data, error } = await supabase.rpc('admin_find_user_by_email', {
+    target_email: email,
+  });
+  if (error) throw error;
+  return ((data ?? [])[0] ?? null) as GuestLookup | null;
+}
