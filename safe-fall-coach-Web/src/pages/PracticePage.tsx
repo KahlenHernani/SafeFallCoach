@@ -12,6 +12,7 @@ import {
   type StateMessage,
 } from '../lib/activeLearningApi';
 import { recordSessionEnd, recordSessionStart } from '../lib/activeLearningSessionsApi';
+import { findParticipantByEmail, type GuestLookup } from '../lib/adminApi';
 import { useWebcamStream } from '../lib/useWebcamStream';
 import { useAuth } from '../context/AuthContext';
 
@@ -174,9 +175,17 @@ export function PracticePage() {
   const [starting, setStarting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Press “Start session” to use this device’s camera.');
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === 'admin';
   const [state, setState] = useState<StateMessage | null>(null);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+
+  // Admin-only: the guest whose account receives the practice data.
+  const [showGuestModal, setShowGuestModal] = useState(false);
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestError, setGuestError] = useState<string | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [guest, setGuest] = useState<GuestLookup | null>(null);
 
   const stateSocketRef = useRef<WebSocket | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -184,6 +193,9 @@ export function PracticePage() {
   const activeLearningSessionIdRef = useRef<string | null>(null);
   const activeLearningSessionStartRef = useRef<number | null>(null);
   const qrSessionLinkIdRef = useRef<string | null>(null);
+  // Who the session data is saved to: the guest for admins, otherwise the
+  // signed-in user. A ref so the WebSocket handler never sees a stale value.
+  const subjectRef = useRef<{ id: string; email: string | null } | null>(null);
 
   useEffect(() => {
     const qrSessionLinkId = searchParams.get('qrSessionLinkId') ?? sessionStorage.getItem('safefall.qrSessionLinkId');
@@ -223,7 +235,7 @@ export function PracticePage() {
   }, [state?.body_landmarks, webcam.state.status, webcam.videoRef]);
 
   function severityLabel(severity: string) {
-  return severity.toLowerCase() === 'error' ? 'Alert' : severity;
+    return severity.toLowerCase() === 'error' ? 'Alert' : severity;
   }
 
   function openStateSocket() {
@@ -253,10 +265,11 @@ export function PracticePage() {
           [{ id: msg.feedback_id as number, message: msg.latest_feedback as string, severity: msg.severity || 'info' }, ...prev].slice(0, 20),
         );
 
-        if (user) {
+        const subject = subjectRef.current;
+        if (subject) {
           void recordSessionFeedback({
-            userId: user.id,
-            userEmail: user.email ?? null,
+            userId: subject.id,
+            userEmail: subject.email,
             sessionId: activeLearningSessionIdRef.current,
             qrSessionLinkId: qrSessionLinkIdRef.current,
             message: msg.latest_feedback as string,
@@ -276,25 +289,66 @@ export function PracticePage() {
 
   async function handleStart() {
     if (starting || active) return;
+    if (isAdmin) {
+      // Admins must pick which guest account the session belongs to.
+      setGuestError(null);
+      setShowGuestModal(true);
+      return;
+    }
     setShowDisclaimer(true);
+  }
+
+  async function handleGuestLookup(e: React.FormEvent) {
+    e.preventDefault();
+    setGuestError(null);
+    setLookingUp(true);
+    try {
+      const found = await findParticipantByEmail(guestEmail);
+      if (!found) {
+        setGuestError('No account found with that email. The guest needs to sign up first.');
+        return;
+      }
+      if (!found.is_active) {
+        setGuestError('That account is deactivated.');
+        return;
+      }
+      setGuest(found);
+      setShowGuestModal(false);
+      setShowDisclaimer(true);
+    } catch (error) {
+      setGuestError(error instanceof Error ? error.message : 'Unable to look up that account.');
+    } finally {
+      setLookingUp(false);
+    }
   }
 
   async function beginActiveLearningSession() {
     if (starting || active) return;
-    if (!user) {
+
+    const subject = isAdmin
+      ? (guest ? { id: guest.user_id, email: guest.email } : null)
+      : (user ? { id: user.id, email: user.email ?? null } : null);
+
+    if (!subject) {
       setShowDisclaimer(false);
-      setStatusMessage('You must be signed in to start Active Learning Mode.');
+      setStatusMessage(
+        isAdmin
+          ? 'Enter the guest’s email before starting.'
+          : 'You must be signed in to start Active Learning Mode.',
+      );
       return;
     }
+
+    subjectRef.current = subject;
     setShowDisclaimer(false);
     setStarting(true);
     try {
       setStatusMessage('Requesting camera access…');
       await webcam.start();
       setStatusMessage('Starting session…');
-      const session = await startSession(user.id);
+      const session = await startSession(subject.id);
       try {
-        activeLearningSessionIdRef.current = await recordSessionStart(user.id);
+        activeLearningSessionIdRef.current = await recordSessionStart(subject.id);
         activeLearningSessionStartRef.current = Date.now();
       } catch {
         // Usage tracking is best-effort — don't block practice if this fails.
@@ -307,6 +361,7 @@ export function PracticePage() {
       setStatusMessage(`Session active${session.session_id ? ` (${session.session_id})` : ''}.`);
     } catch (error) {
       webcam.stop();
+      subjectRef.current = null;
       setStatusMessage(error instanceof Error ? error.message : 'Unable to start the session.');
     } finally {
       setStarting(false);
@@ -341,6 +396,10 @@ export function PracticePage() {
       webcam.stop();
       setActive(false);
       setState(null);
+      // Clear the guest so the next admin session asks for an email again.
+      subjectRef.current = null;
+      setGuest(null);
+      setGuestEmail('');
     }
   }
 
@@ -349,6 +408,49 @@ export function PracticePage() {
     : 'connecting to server…';
 
   return <div className="page-stack">
+    {showGuestModal ? (
+      <div className="practice-modal-backdrop" role="presentation">
+        <form
+          className="practice-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="guest-modal-title"
+          onSubmit={handleGuestLookup}
+        >
+          <div className="practice-modal-header">
+            <h2 id="guest-modal-title">Who is practicing?</h2>
+          </div>
+          <p>
+            Enter the guest’s account email. All feedback and session data from this
+            practice will be saved to their account, not yours.
+          </p>
+          <label style={{ display: 'block', marginTop: '0.75rem' }}>
+            Guest email
+            <input
+              type="email"
+              placeholder="guest@example.com"
+              value={guestEmail}
+              onChange={(e) => setGuestEmail(e.target.value)}
+              required
+              autoFocus
+            />
+          </label>
+          {guestError ? <p className="helper-text" style={{ color: '#dc2626' }}>{guestError}</p> : null}
+          <div className="practice-modal-actions">
+            <button
+              className="button button-secondary"
+              type="button"
+              onClick={() => setShowGuestModal(false)}
+            >
+              Cancel
+            </button>
+            <button className="button button-primary" type="submit" disabled={lookingUp}>
+              {lookingUp ? 'Checking…' : 'Continue'}
+            </button>
+          </div>
+        </form>
+      </div>
+    ) : null}
     {showDisclaimer ? (
       <div className="practice-modal-backdrop" role="presentation">
         <section
@@ -411,6 +513,7 @@ export function PracticePage() {
         <div className="feedback-container">
           {active ? (
             <p className="helper-text" style={{ margin: 0 }}>
+              {isAdmin && guest ? `Guest: ${guest.email} · ` : ''}
               {state?.duration_str ?? '00:00'} · Falls: {state?.fall_count ?? 0}
               {' · '}{ingestLabel}
             </p>
@@ -470,7 +573,7 @@ export function PracticePage() {
               onClick={active ? handleStop : handleStart}
               disabled={starting}
             >
-            {starting ? 'Starting…' : active ? 'Stop Active Learning' : 'Start Active Learning'}
+              {starting ? 'Starting…' : active ? 'Stop Active Learning' : 'Start Active Learning'}
             </button>
           </div>
         </div>

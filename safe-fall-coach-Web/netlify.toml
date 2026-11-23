@@ -5,11 +5,8 @@
 [build.environment]
   NODE_VERSION = "22"
   # Supabase anon key and public URLs are intentionally in the client bundle,
-  # so tell Netlify's secret scanner not to fail the build on them.
-  SECRETS_SCAN_OMIT_KEYS = "https://ecaegxbttomzzqndxyjf.supabase.co,
-  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjYWVneGJ0dG9tenpxbmR4eWpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MDE5MTQsImV4cCI6MjA5NTM3NzkxNH0.BXIBfnnUim0_-U-PVb1u8l_b5yqDFwelngtPjJdio6Y,
-  VITE_ACTIVE_LEARNING_API_URL,
-  VITE_ACCESS_EMAIL_WEBHOOK_URL"
+  # so tell Netlify's secret scanner not to fail the build on these variables.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,VITE_ACTIVE_LEARNING_API_URL,VITE_ACCESS_EMAIL_WEBHOOK_URL"
 
 [[redirects]]
   from = "/*"
