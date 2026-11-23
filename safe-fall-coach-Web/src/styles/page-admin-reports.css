@@ -1,0 +1,47 @@
+.report-subtabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.report-summary > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.report-summary span { color: var(--muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
+.report-summary strong { font-size: 1.4rem; }
+
+.report-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.report-toolbar .admin-search { flex: 1; min-width: 220px; }
+.report-toolbar select { padding: 0.7rem; border: 2px solid var(--border); border-radius: 12px; background: white; }
+.report-check { display: inline-flex; align-items: center; gap: 0.4rem; }
+.report-check input { width: auto; margin: 0; }
+
+.month-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.month-chip {
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.month-chip.submitted { background: #dcfce7; color: #166534; }
+.month-chip.overdue { background: #fee2e2; color: #991b1b; }
+.month-chip.upcoming { background: #fef3c7; color: #92400e; }
+
+.report-detail-list { display: grid; gap: 0.5rem; margin: 0.75rem 0 0; }
+.report-detail-list div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.report-detail-list dt { color: var(--muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+.report-detail-list dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.report-modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; }
